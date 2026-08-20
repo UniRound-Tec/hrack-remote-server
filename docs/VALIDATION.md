@@ -178,6 +178,14 @@ now fails if the font is not loaded, the HRack background drifts, renderer
 activation is skipped, or rendered bytes are not acknowledged. The revised page
 again drove and released a real Electron/`cmd.exe` PTY locally.
 
+Image `hrack-remote-server:0fa097a` was then deployed. The public interface gate
+passed in 2.2 seconds and the renderer-neutral Chromium → public HTTPS/WSS →
+Electron → real PTY gate passed in 7.1 seconds. A refresh of the originally
+reported Chrome tab confirmed the deployed page had Maple Mono ready, selected
+WebGL, completed renderer activation, and used `rgb(31, 31, 31)` HRack Dark. Its
+old room correctly reported unavailable because the single-process deployment
+restart invalidates all in-memory rooms.
+
 ## Remaining scope limits
 
 - Single process and single replica only.
