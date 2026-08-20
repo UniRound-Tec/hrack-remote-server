@@ -10,7 +10,7 @@ import {
   parseRemoteFrame
 } from '../src/protocol/remote-protocol.js'
 
-const upstreamSha256 = '295c157edd02c7cf6feaa969456822c0a6fe1ec775c99ff1b639f44b3db5f030'
+const upstreamSha256 = 'b2fb491998cd18491fbac0822107f4157d8f2a570d54bebcbbf66c2859d3d321'
 const protocolPath = fileURLToPath(
   new URL('../src/protocol/remote-protocol.ts', import.meta.url)
 )
@@ -49,5 +49,31 @@ describe('vendored remote protocol contract', () => {
     )
     expect(desktop.ok && isRemoteDesktopToPhoneMessage(desktop.value)).toBe(true)
     expect(phone.ok && isRemotePhoneToDesktopMessage(phone.value)).toBe(true)
+  })
+
+  it('forwards create dimensions and leaves blank workspace rejection to the desktop', () => {
+    const create = parseRemoteFrame(
+      JSON.stringify({
+        v: 1,
+        type: 'create',
+        requestId: 'create-1',
+        installationId: 'codex:fixture',
+        workspace: '',
+        cols: 52,
+        rows: 20
+      })
+    )
+    expect(create).toEqual({
+      ok: true,
+      value: {
+        v: 1,
+        type: 'create',
+        requestId: 'create-1',
+        installationId: 'codex:fixture',
+        workspace: '',
+        cols: 52,
+        rows: 20
+      }
+    })
   })
 })
