@@ -186,6 +186,32 @@ WebGL, completed renderer activation, and used `rgb(31, 31, 31)` HRack Dark. Its
 old room correctly reported unavailable because the single-process deployment
 restart invalidates all in-memory rooms.
 
+## P5 remote creation validation
+
+The pre-App P5 protocol correction made terminal `cols` and `rows` mandatory on
+`create`, so the desktop can spawn the TUI at the phone's actual size instead of
+resizing after its first paint. A blank but structurally safe workspace now
+reaches the occupied desktop and receives a correlated `invalid-workspace`;
+non-string, NUL-containing, oversized, and dimension-invalid frames still fail
+at the protocol boundary. The relay and HRack protocol source files were
+byte-identical after this change, and the relay's 20 unit tests, two browser
+tests, typecheck, and production build passed.
+
+Committed image `hrack-remote-server:f356bdc` was built on the production host
+and deployed without changing its loopback-only port binding or container
+hardening. The public deployed-interface gate passed health, room creation,
+canonical-origin policy, pairing, both WebSocket directions, and revoke in
+2.192 seconds. The container was healthy with zero restarts after deployment.
+
+The HRack P5 live gate then used a real Chromium generation page and the public
+HTTPS/WSS reverse proxy to seat a real local Electron HRack process. The phone
+connection received the desktop's sanitized CLI catalog, remotely created one
+real `AgentSessionRuntime`/`cmd.exe` PTY, and immediately drove it. The gate
+directly verified skip-approval and explicit arguments, a 44×19 initial PTY,
+real input/output and acknowledgements, one-session idempotency on an exact
+create retry, `undrive`, and public room revoke. It passed in 6.2 seconds. No
+Node in-memory relay substituted for this final production-interface check.
+
 ## Remaining scope limits
 
 - Single process and single replica only.
