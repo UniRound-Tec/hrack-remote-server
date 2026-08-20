@@ -41,6 +41,7 @@ type Room = OpenRoom | RevokedRoom
 interface TokenBucket {
   tokens: number
   updatedAt: number
+  lastSeenAt: number
 }
 
 interface Connection {
@@ -455,13 +456,19 @@ export class RelayCore {
     limit: RateLimitConfig
   ): boolean {
     const now = this.dependencies.now()
-    const bucket = buckets.get(key) ?? { tokens: limit.burst, updatedAt: now }
+    let bucket = buckets.get(key)
+    if (!bucket && buckets.size >= this.config.maxRateLimitKeys) {
+      this.#pruneBuckets(buckets, limit, now)
+      if (buckets.size >= this.config.maxRateLimitKeys) return false
+    }
+    bucket ??= { tokens: limit.burst, updatedAt: now, lastSeenAt: now }
     const elapsed = Math.max(0, now - bucket.updatedAt)
     bucket.tokens = Math.min(
       limit.burst,
       bucket.tokens + (elapsed * limit.perMinute) / 60_000
     )
     bucket.updatedAt = now
+    bucket.lastSeenAt = now
     if (bucket.tokens < 1) {
       buckets.set(key, bucket)
       return false
@@ -469,5 +476,17 @@ export class RelayCore {
     bucket.tokens -= 1
     buckets.set(key, bucket)
     return true
+  }
+
+  #pruneBuckets(
+    buckets: Map<string, TokenBucket>,
+    limit: RateLimitConfig,
+    now: number
+  ): void {
+    const refillMs = (limit.burst / limit.perMinute) * 60_000
+    const staleAfterMs = Math.max(60_000, refillMs * 2)
+    for (const [key, bucket] of buckets) {
+      if (now - bucket.lastSeenAt >= staleAfterMs) buckets.delete(key)
+    }
   }
 }

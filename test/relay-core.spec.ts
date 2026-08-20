@@ -189,6 +189,29 @@ describe('RelayCore', () => {
     })
   })
 
+  it('bounds rate-limit key memory and admits a new key after stale eviction', () => {
+    let now = 0
+    let byte = 20
+    const core = new RelayCore(
+      defaultRelayConfig({
+        maxRateLimitKeys: 1,
+        createRate: { burst: 1, perMinute: 60 }
+      }),
+      {
+        now: () => now,
+        randomBytes: (size) => new Uint8Array(size).fill(byte++)
+      }
+    )
+
+    expect(core.createRoom({ ipKey: 'first' }).ok).toBe(true)
+    expect(core.createRoom({ ipKey: 'second' })).toEqual({
+      ok: false,
+      reason: 'rate-limited'
+    })
+    now = 60_000
+    expect(core.createRoom({ ipKey: 'second' }).ok).toBe(true)
+  })
+
   it('rate-limits hello attempts by anonymized IP key', () => {
     const random = [new Uint8Array(16).fill(5), new Uint8Array(32).fill(6)]
     const core = new RelayCore(

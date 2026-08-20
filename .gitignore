@@ -3,6 +3,8 @@ dist/
 playwright-report/
 test-results/
 .env
+.load-*.env
+.tls-*.env
+.tls-verify/
 *.log
 coverage/
-

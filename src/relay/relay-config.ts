@@ -9,6 +9,7 @@ export interface RelayConfig {
   allowInsecureLoopback: boolean
   maxRooms: number
   maxConnections: number
+  maxRateLimitKeys: number
   maxFrameBytes: number
   maxRoomBufferedBytes: number
   createRate: RateLimitConfig
@@ -27,6 +28,7 @@ const defaults: RelayConfig = {
   allowInsecureLoopback: false,
   maxRooms: 10_000,
   maxConnections: 20_000,
+  maxRateLimitKeys: 50_000,
   maxFrameBytes: 1_048_576,
   maxRoomBufferedBytes: 1_048_576,
   createRate: { burst: 3, perMinute: 10 },
@@ -90,6 +92,10 @@ export function validateRelayConfig(input: RelayConfig): RelayConfig {
     basePath: normalizeBasePath(input.basePath),
     maxRooms: positiveInteger('MAX_ROOMS', input.maxRooms),
     maxConnections: positiveInteger('MAX_CONNECTIONS', input.maxConnections),
+    maxRateLimitKeys: positiveInteger(
+      'MAX_RATE_LIMIT_KEYS',
+      input.maxRateLimitKeys
+    ),
     maxFrameBytes: positiveInteger('MAX_FRAME_BYTES', input.maxFrameBytes),
     maxRoomBufferedBytes: positiveInteger(
       'MAX_ROOM_BUFFERED_BYTES',
@@ -116,12 +122,33 @@ export function loadRelayConfig(env: NodeJS.ProcessEnv = process.env): RelayConf
     allowInsecureLoopback: env.ALLOW_INSECURE_LOOPBACK === '1',
     maxRooms: envInteger(env, 'MAX_ROOMS', baseline.maxRooms),
     maxConnections: envInteger(env, 'MAX_CONNECTIONS', baseline.maxConnections),
+    maxRateLimitKeys: envInteger(
+      env,
+      'MAX_RATE_LIMIT_KEYS',
+      baseline.maxRateLimitKeys
+    ),
     maxFrameBytes: envInteger(env, 'MAX_FRAME_BYTES', baseline.maxFrameBytes),
     maxRoomBufferedBytes: envInteger(
       env,
       'MAX_ROOM_BUFFERED_BYTES',
       baseline.maxRoomBufferedBytes
     ),
+    createRate: {
+      burst: envInteger(env, 'CREATE_RATE_BURST', baseline.createRate.burst),
+      perMinute: envInteger(
+        env,
+        'CREATE_RATE_PER_MINUTE',
+        baseline.createRate.perMinute
+      )
+    },
+    helloRate: {
+      burst: envInteger(env, 'HELLO_RATE_BURST', baseline.helloRate.burst),
+      perMinute: envInteger(
+        env,
+        'HELLO_RATE_PER_MINUTE',
+        baseline.helloRate.perMinute
+      )
+    },
     helloDeadlineMs: envInteger(env, 'HELLO_DEADLINE_MS', baseline.helloDeadlineMs),
     pingIntervalMs: envInteger(env, 'PING_INTERVAL_MS', baseline.pingIntervalMs),
     pongTimeoutMs: envInteger(env, 'PONG_TIMEOUT_MS', baseline.pongTimeoutMs),

@@ -16,7 +16,9 @@
     "build": "npm run build:server && npm run build:web",
     "pree2e": "npm run build",
     "e2e": "playwright test",
+    "preverify:live": "npm run build",
     "verify:live": "tsx scripts/live-verify.ts",
+    "verify:tls": "tsx scripts/tls-live-verify.ts",
     "load:gate": "tsx scripts/load-gate.ts"
   },
   "dependencies": {

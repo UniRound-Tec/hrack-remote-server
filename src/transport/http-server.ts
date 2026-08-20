@@ -27,6 +27,7 @@ export interface RelayServerOptions {
   logger?: (record: SafeLogRecord) => void
   logSecret?: Uint8Array
   webRoot?: string
+  lifecycleLogs?: boolean
 }
 
 export interface RunningRelayServer {
@@ -38,7 +39,7 @@ const NO_STORE = { 'cache-control': 'no-store' }
 const HTML_SECURITY_HEADERS = {
   ...NO_STORE,
   'content-security-policy':
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   'referrer-policy': 'no-referrer',
   'x-content-type-options': 'nosniff'
 }
@@ -254,8 +255,14 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
           empty(response, result.reason === 'rate-limited' ? 429 : 503)
           return
         }
-        json(response, 201, result)
-        log({ event: 'room-create', result: 'created', ipKey: safeIpKey(request) })
+        json(response, 201, {
+          roomId: result.roomId,
+          joinUrl: result.joinUrl,
+          revokeToken: result.revokeToken
+        })
+        if (options.lifecycleLogs) {
+          log({ event: 'room-create', result: 'created', ipKey: safeIpKey(request) })
+        }
         return
       }
 
@@ -338,7 +345,9 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
         ipKey: safeIpKey(request)
       })
     )
-    log({ event: 'socket-open', connectionId, ipKey: safeIpKey(request) })
+    if (options.lifecycleLogs) {
+      log({ event: 'socket-open', connectionId, ipKey: safeIpKey(request) })
+    }
 
     socket.on('pong', () => {
       execute(core.handleSocket({ type: 'pong', connectionId }))
@@ -349,12 +358,6 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
         return
       }
       const text = data.toString()
-      log({
-        event: 'socket-frame',
-        connectionId,
-        result: 'received',
-        frameBytes: Buffer.byteLength(text)
-      })
       execute(
         core.handleSocket({
           type: 'text',
@@ -367,7 +370,9 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
     socket.on('close', () => {
       sockets.delete(connectionId)
       execute(core.handleSocket({ type: 'close', connectionId }))
-      log({ event: 'socket-close', connectionId, result: 'closed' })
+      if (options.lifecycleLogs) {
+        log({ event: 'socket-close', connectionId, result: 'closed' })
+      }
     })
     socket.on('error', () => {
       log({ event: 'socket-error', connectionId, result: 'transport-error' })
@@ -386,6 +391,8 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
   const ticker = setInterval(() => execute(core.handleSocket({ type: 'tick' })), tickEvery)
   ticker.unref()
 
+  let closePromise: Promise<void> | null = null
+
   return {
     listen: (port, host = '127.0.0.1') =>
       new Promise<void>((resolve, reject) => {
@@ -395,16 +402,20 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
           resolve()
         })
       }),
-    close: async () => {
-      clearInterval(ticker)
-      for (const timer of drainTimers) clearTimeout(timer)
-      drainTimers.clear()
-      for (const socket of sockets.values()) socket.terminate()
-      sockets.clear()
-      await new Promise<void>((resolve, reject) => {
-        httpServer.close((error) => (error ? reject(error) : resolve()))
-      })
-      webSocketServer.close()
+    close: () => {
+      if (closePromise) return closePromise
+      closePromise = (async () => {
+        clearInterval(ticker)
+        for (const timer of drainTimers) clearTimeout(timer)
+        drainTimers.clear()
+        for (const socket of sockets.values()) socket.terminate()
+        sockets.clear()
+        await new Promise<void>((resolve, reject) => {
+          httpServer.close((error) => (error ? reject(error) : resolve()))
+        })
+        webSocketServer.close()
+      })()
+      return closePromise
     }
   }
 }

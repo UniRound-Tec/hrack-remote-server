@@ -115,6 +115,7 @@ describe('real HTTP and WebSocket server', () => {
 
     expect(response.status).toBe(201)
     expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(Object.keys(body).sort()).toEqual(['joinUrl', 'revokeToken', 'roomId'])
     expect(Buffer.from(String(body.roomId), 'base64url')).toHaveLength(16)
     expect(Buffer.from(String(body.revokeToken), 'base64url')).toHaveLength(32)
     expect(body.joinUrl).toBe(`${origin}/${body.roomId}`)
