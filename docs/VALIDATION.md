@@ -121,9 +121,24 @@ verified the canonical join URL, and passed both WebSocket directions and revoke
 
 The public certificate was valid for the final domain, but the first public check
 found the reverse proxy pointing back to the host's own public HTTP endpoint. That
-configuration returned a self-referential HTTPS `301` for every request. Public
-WSS validation therefore remains pending until the proxy upstream is changed to
-the relay's loopback listener.
+configuration returned a self-referential HTTPS `301` for every request. The
+upstream was corrected to the loopback listener and the full public path then
+passed:
+
+```json
+{"result":"passed","interface":"deployed HTTP + WebSocket","checks":["health","create","origin-policy-and-canonical-url","pair","phone-to-desktop","desktop-to-phone","revoke-before-close"]}
+```
+
+A real Chrome session loaded the public generation page, created a room, confirmed
+the canonical public join URL, opened the join page, and confirmed the page is not
+a terminal console. The temporary room was revoked over public WSS and the browser
+then displayed the generic unavailable state.
+
+The OpenResty proxy was hardened with buffering disabled, 75-second read/write
+timeouts, and `access_log off` for the relay location. A before/after counter
+confirmed that the final public verification added no `/remote/` access-log
+records. The exact `/` path redirects to `/remote/`; the redirected response was
+HTTP 200. The production relay remained healthy with zero restarts.
 
 ## Remaining scope limits
 
