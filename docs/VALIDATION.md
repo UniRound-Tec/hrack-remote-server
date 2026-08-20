@@ -87,11 +87,44 @@ An intentionally harsher experiment kept the mandatory traffic and additionally 
 
 No frame was lost and no connection failed, but p99 exceeded 100ms. This is an expansion-profile limit, not a passing result. The mandatory gate therefore defaults to no synthetic 256 KiB burst; `LOAD_BURST_BYTES=262144` opts into the separate experiment.
 
+## Remote-host deployment verification
+
+The production image was also deployed to a shared Ubuntu 24.04 x86_64 host with
+4 vCPU, 3.8 GiB RAM, and Docker 29.6.1. The container uses Node.js 22.23.0,
+runs as the unprivileged `node` user with a read-only root filesystem, has a
+768 MiB memory limit, and publishes only `127.0.0.1:8787` for a same-host
+reverse proxy. Its restart policy is `unless-stopped`.
+
+An independent container used real HTTP and WebSocket connections against the
+deployed process. A second run originated on the development workstation and
+crossed the network through an SSH tunnel to the loopback-only upstream.
+
+```json
+{"result":"passed","interface":"deployed HTTP + WebSocket","checks":["health","create","pair","phone-to-desktop","desktop-to-phone","revoke-before-close"]}
+```
+
+A separate temporary relay instance on the same remote host then ran a controlled
+all-active profile. It did not touch or restart the production container:
+
+```json
+{"result":"passed","connections":200,"rooms":100,"activeRooms":100,"durationSeconds":30,"sent":59600,"received":59600,"deliveryRatio":1,"p99Ms":19,"maxP99Ms":100,"disconnected":0,"maxClientBufferedBytes":0}
+```
+
+The temporary load target and load-generator image were removed after the run.
+The production container remained healthy with zero restarts. This remote-host
+smoke result is intentionally smaller than the 2,000-connection mandatory gate
+because the host is shared with unrelated workloads.
+
+The container currently has a provisional IP-based `PUBLIC_ORIGIN`. It must be
+recreated with the final HTTPS domain before browser use, because the application
+intentionally rejects a mismatched browser `Origin` and never trusts forwarded
+host headers.
+
 ## Remaining scope limits
 
 - Single process and single replica only.
 - In-memory rooms intentionally disappear on restart.
-- No public Internet or multi-region latency result.
+- No final-domain public Internet or multi-region latency result.
 - No public-CA certificate lifecycle result.
 - No 20,000-connection expansion result.
 - No claim that `MAX_CONNECTIONS=20000` is measured capacity.

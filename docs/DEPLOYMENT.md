@@ -49,7 +49,48 @@ npm run build
 PUBLIC_ORIGIN=https://hrack.example BASE_PATH=/remote HOST=127.0.0.1 PORT=3000 npm start
 ```
 
+## Docker behind a same-host reverse proxy
+
+Build the production image and bind the published port to loopback only:
+
+```sh
+docker build -t hrack-remote-server:0.1.0 .
+docker run -d \
+  --name hrack-remote-server \
+  --restart unless-stopped \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  --cap-drop ALL \
+  --security-opt no-new-privileges \
+  --pids-limit 256 \
+  --memory 768m \
+  --log-opt max-size=10m \
+  --log-opt max-file=3 \
+  -p 127.0.0.1:8787:3000 \
+  -e PUBLIC_ORIGIN=https://hrack.example \
+  -e BASE_PATH=/remote \
+  -e HOST=0.0.0.0 \
+  -e PORT=3000 \
+  -e MAX_ROOMS=2000 \
+  -e MAX_CONNECTIONS=4000 \
+  -e MAX_RATE_LIMIT_KEYS=10000 \
+  hrack-remote-server:0.1.0
+```
+
+The example capacity ceilings are conservative deployment rejection limits for a
+small host, not measured capacity. Keep `PUBLIC_ORIGIN` equal to the final browser
+origin; the relay intentionally does not infer it from reverse-proxy headers.
+
 The process emits newline-delimited JSON. It never logs request paths, room IDs, join URLs, authorization values, protocol payloads, workspace paths, or PTY content. Runtime metric records contain only memory and event-loop measurements.
+
+After launch, validate the deployed target from a separate process:
+
+```sh
+TARGET_ORIGIN=http://127.0.0.1:8787 TARGET_BASE_PATH=/remote npm run verify:deployed
+```
+
+This creates and pairs a real room, relays marker payloads in both directions over
+WebSocket, and verifies authenticated revoke delivery before socket closure.
 
 ## Nginx TLS example
 
