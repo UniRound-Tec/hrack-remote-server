@@ -5,6 +5,7 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
     "types": ["node", "vitest/globals"],

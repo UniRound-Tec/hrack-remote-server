@@ -69,6 +69,9 @@ export function normalizeBasePath(value: string): string {
   if (!trimmed.startsWith('/') || trimmed.endsWith('/') || trimmed.includes('..')) {
     throw new Error('BASE_PATH must be empty or an absolute path without a trailing slash')
   }
+  if (!/^\/(?:[A-Za-z0-9._~-]+\/)*[A-Za-z0-9._~-]+$/.test(trimmed)) {
+    throw new Error('BASE_PATH contains unsupported characters')
+  }
   return trimmed
 }
 
@@ -131,4 +134,3 @@ export function loadRelayConfig(env: NodeJS.ProcessEnv = process.env): RelayConf
     violationLimit: envInteger(env, 'VIOLATION_LIMIT', baseline.violationLimit)
   })
 }
-
