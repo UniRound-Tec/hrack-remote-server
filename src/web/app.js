@@ -39,6 +39,15 @@ function actionButton(label, testid) {
   return button
 }
 
+function buttonLink(label, href, testid) {
+  const link = document.createElement('a')
+  link.className = 'button-link'
+  link.href = href
+  link.textContent = label
+  link.dataset.testid = testid
+  return link
+}
+
 function renderGeneratePage() {
   app.replaceChildren()
   app.append(
@@ -80,9 +89,14 @@ function renderGeneratePage() {
       const copy = actionButton('Copy join URL', 'copy-url')
       const revoke = actionButton('Revoke room', 'revoke-room')
       revoke.className = 'danger'
+      const demo = buttonLink(
+        'Open browser demo',
+        `${base}/demo/${encodeURIComponent(room.roomId)}`,
+        'demo-link'
+      )
       const actions = document.createElement('div')
       actions.className = 'actions'
-      actions.append(copy, revoke)
+      actions.append(demo, copy, revoke)
       result.replaceChildren(
         textElement('h2', '', 'Room ready'),
         qrElement(joinUrl),
@@ -136,17 +150,27 @@ function renderJoinPage() {
     return
   }
   const canonical = `${location.origin}${location.pathname.replace(/\/$/, '')}`
+  const demoUrl = `${location.origin}${base}/demo/${encodeURIComponent(
+    canonical.slice(canonical.lastIndexOf('/') + 1)
+  )}`
   app.append(
     textElement(
       'p',
       'lede',
-      'Open HRack on the desktop and use this exact URL to pair. This website is not a terminal console.'
+      'Open HRack on the desktop and use this exact URL to pair. To drive it from this browser, open the demo controller below.'
     ),
     qrElement(canonical),
-    textElement('p', 'url', canonical)
+    textElement('p', 'url', canonical),
+    buttonLink('Open browser demo', demoUrl, 'demo-link')
   )
 }
 
-if (page === 'join') renderJoinPage()
-else renderGeneratePage()
-
+if (page === 'join') {
+  renderJoinPage()
+} else if (page === 'demo') {
+  void import('./remote-demo.js').then(({ renderRemoteDemo }) => {
+    renderRemoteDemo({ app, base, roomAvailable })
+  })
+} else {
+  renderGeneratePage()
+}

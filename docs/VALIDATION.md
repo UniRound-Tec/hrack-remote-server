@@ -140,11 +140,29 @@ confirmed that the final public verification added no `/remote/` access-log
 records. The exact `/` path redirects to `/remote/`; the redirected response was
 HTTP 200. The production relay remained healthy with zero restarts.
 
+## Browser controller validation
+
+The P4 browser controller was first developed against a real built relay and a
+real Chromium page. Its browser gate occupied the phone seat and exercised the
+actual WebSocket protocol: desktop session snapshot, correlated `drive`, history
+replay, xterm keyboard `pty-in`, base64 `pty-out`, render-complete `pty-ack`, and
+explicit `undrive`. Both the original pairing-page gate and the controller gate
+passed in one browser run.
+
+The controller was then connected to a separately launched production relay and
+a real built Electron HRack instance. HRack created an actual Agent Runtime backed
+by a real `cmd.exe` PTY. Text typed into the browser reached that PTY, the marker
+was observed in both authoritative PTY history and the browser xterm, HRack showed
+its remote-control input lock, and **Back to sessions** removed the lock. The room
+was revoked in cleanup. This gate is maintained as
+`e2e/remote-browser-demo-live.spec.ts` in the HRack repository.
+
 ## Remaining scope limits
 
 - Single process and single replica only.
 - In-memory rooms intentionally disappear on restart.
-- No final-domain public Internet or multi-region latency result.
-- No public-CA certificate lifecycle result.
+- No multi-region latency result.
+- Public-CA HTTPS/WSS was verified once; certificate renewal lifecycle remains an
+  operations responsibility and has not been exercised.
 - No 20,000-connection expansion result.
 - No claim that `MAX_CONNECTIONS=20000` is measured capacity.

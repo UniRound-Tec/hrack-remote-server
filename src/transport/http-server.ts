@@ -108,7 +108,7 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
 
   const serveIndex = async (
     response: ServerResponse,
-    page: 'generate' | 'join',
+    page: 'generate' | 'join' | 'demo',
     roomAvailable: boolean
   ): Promise<void> => {
     const template = await readFile(resolve(webRoot, 'index.html'), 'utf8')
@@ -292,6 +292,27 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
       if (request.method === 'GET' && path === rootPath) {
         await serveIndex(response, 'generate', false)
         return
+      }
+
+      const demoPath = `${base}/demo`
+      const demoPrefix = `${demoPath}/`
+      if (
+        request.method === 'GET' &&
+        (path === demoPath || path === demoPrefix)
+      ) {
+        await serveIndex(response, 'demo', true)
+        return
+      }
+
+      if (request.method === 'GET' && path.startsWith(demoPrefix)) {
+        const relativePath = path.slice(demoPrefix.length)
+        if (await serveAsset(response, relativePath)) return
+        const roomId = decodeURIComponent(relativePath)
+        if (roomId.length > 0 && !roomId.includes('/')) {
+          const available = core.roomAvailability(roomId) === 'open'
+          await serveIndex(response, 'demo', available)
+          return
+        }
       }
 
       if (request.method === 'GET' && path.startsWith(`${base}/`)) {
