@@ -157,6 +157,15 @@ its remote-control input lock, and **Back to sessions** removed the lock. The ro
 was revoked in cleanup. This gate is maintained as
 `e2e/remote-browser-demo-live.spec.ts` in the HRack repository.
 
+The committed image was then deployed as `hrack-remote-server:f7447c4`. The
+deployed-interface gate passed health, canonical-origin policy, room creation,
+pairing, both WebSocket directions, and revoke over the public HTTPS/WSS path in
+2.2 seconds. Finally, the same browser/Electron gate targeted
+`https://hrack.modplex.app/`: a real Chromium controller traversed the public
+reverse proxy and drove the local real HRack PTY, observed output, released the
+desktop lock, and revoked its room. It passed in 6.5 seconds. The production
+container remained healthy.
+
 ## Remaining scope limits
 
 - Single process and single replica only.
