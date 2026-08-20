@@ -4,7 +4,6 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
-    "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
@@ -13,4 +12,3 @@
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts", "vite.config.ts", "playwright.config.ts"]
 }
-
