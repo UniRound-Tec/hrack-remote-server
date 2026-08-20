@@ -198,6 +198,26 @@ test('browser demo drives a real protocol session with terminal input and output
     )
     await expect(page.getByTestId('demo-terminal-view')).toBeVisible()
     await expect(page.locator('.xterm')).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          [...document.fonts].some(
+            (font) => font.family === 'Maple Mono' && font.status === 'loaded'
+          )
+        )
+      )
+      .toBe(true)
+    await expect(page.locator('.terminal-host')).toHaveAttribute(
+      'data-renderer-attempted',
+      '1'
+    )
+    await expect
+      .poll(() =>
+        page
+          .locator('.terminal-host')
+          .evaluate((element) => getComputedStyle(element).backgroundColor)
+      )
+      .toBe('rgb(31, 31, 31)')
 
     const marker = 'BROWSER_DEMO_INPUT'
     await page.locator('.xterm-helper-textarea').focus()
@@ -230,6 +250,10 @@ test('browser demo drives a real protocol session with terminal input and output
         )
       )
       .toBeTruthy()
+    await expect(page.locator('.terminal-host')).toHaveAttribute(
+      'data-rendered-pty-bytes',
+      String(output.byteLength)
+    )
 
     await page.getByTestId('demo-return').click()
     await expect

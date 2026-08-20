@@ -1,11 +1,13 @@
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
+import './remote-demo.css'
 
 import {
   parseJoinUrl,
   parseRemoteFrame
 } from '../protocol/remote-protocol.ts'
+import { createRendererController } from './xterm-renderer.js'
 
 function element(tag, className, text) {
   const node = document.createElement(tag)
@@ -46,7 +48,43 @@ function requestId() {
     `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 }
 
-export function renderRemoteDemo({ app, base, roomAvailable }) {
+const HRACK_TERMINAL_FONT =
+  '"Maple Mono", "Microsoft JhengHei UI", "Microsoft YaHei UI", "PingFang TC", "PingFang SC", "Noto Sans Mono CJK TC", "Noto Sans Mono CJK SC", "Noto Sans CJK TC", "Noto Sans CJK SC", Consolas, monospace'
+
+const HRACK_DARK_TERMINAL_THEME = {
+  background: '#1f1f1f',
+  foreground: '#c8d3e0',
+  cursor: '#c8d3e0',
+  cursorAccent: '#1f1f1f',
+  selectionBackground: '#3d4f6b',
+  black: '#1b1d23',
+  red: '#e06c75',
+  green: '#98c379',
+  yellow: '#e5c07b',
+  blue: '#61afef',
+  magenta: '#c678dd',
+  cyan: '#56b6c2',
+  white: '#abb2bf',
+  brightBlack: '#5c6370',
+  brightRed: '#e06c75',
+  brightGreen: '#98c379',
+  brightYellow: '#e5c07b',
+  brightBlue: '#61afef',
+  brightMagenta: '#c678dd',
+  brightCyan: '#56b6c2',
+  brightWhite: '#ffffff'
+}
+
+export async function renderRemoteDemo({ app, base, roomAvailable }) {
+  try {
+    await Promise.all([
+      document.fonts.load('400 14px "Maple Mono"'),
+      document.fonts.load('700 14px "Maple Mono"')
+    ])
+  } catch {
+    // A blocked font must not strand the controller on a blank page. The
+    // browser gate still detects this fallback so deployment cannot miss it.
+  }
   document.title = 'Browser controller · HRack Remote'
   app.classList.add('demo-shell')
   app.replaceChildren()
@@ -117,6 +155,7 @@ export function renderRemoteDemo({ app, base, roomAvailable }) {
   const returnButton = button('Back to sessions', 'demo-return', 'secondary')
   terminalToolbar.append(terminalTitle, returnButton)
   const terminalHost = element('div', 'terminal-host')
+  terminalHost.dataset.renderedPtyBytes = '0'
   const keybar = element('div', 'keybar')
   const keys = [
     ['Esc', '\u001b'],
@@ -137,23 +176,28 @@ export function renderRemoteDemo({ app, base, roomAvailable }) {
   app.append(root)
 
   const terminal = new Terminal({
-    allowProposedApi: false,
-    convertEol: false,
+    allowProposedApi: true,
+    allowTransparency: true,
     cursorBlink: true,
-    cursorStyle: 'bar',
-    fontFamily: 'Cascadia Mono, Consolas, ui-monospace, monospace',
+    fontFamily: HRACK_TERMINAL_FONT,
     fontSize: 14,
+    reflowCursorLine: true,
     scrollback: 5_000,
-    theme: {
-      background: '#030913',
-      foreground: '#e8f1ff',
-      cursor: '#6ee7c7',
-      selectionBackground: '#31567a'
-    }
+    smoothScrollDuration: 80,
+    theme: HRACK_DARK_TERMINAL_THEME
   })
   const fit = new FitAddon()
   terminal.loadAddon(fit)
   terminal.open(terminalHost)
+  const renderer = createRendererController(terminal, (kind) => {
+    terminalHost.dataset.renderer = kind
+  })
+  terminalHost.dataset.renderer = 'dom'
+  requestAnimationFrame(() => {
+    void renderer.activate().finally(() => {
+      terminalHost.dataset.rendererAttempted = '1'
+    })
+  })
 
   let socket = null
   let connectedRoomId = null
@@ -162,6 +206,7 @@ export function renderRemoteDemo({ app, base, roomAvailable }) {
   let activeSessionId = null
   let fitting = false
   let closedByUser = false
+  let renderedPtyBytes = 0
   const sessions = new Map()
 
   function setStatus(phase, message) {
@@ -388,6 +433,8 @@ export function renderRemoteDemo({ app, base, roomAvailable }) {
       case 'pty-out':
         if (message.sessionId === activeSessionId) {
           terminal.write(bytesFromBase64(message.data), () => {
+            renderedPtyBytes += message.byteLength
+            terminalHost.dataset.renderedPtyBytes = String(renderedPtyBytes)
             send({
               v: 1,
               type: 'pty-ack',
@@ -507,6 +554,7 @@ export function renderRemoteDemo({ app, base, roomAvailable }) {
     if (activeSessionId) send({ v: 1, type: 'undrive', sessionId: activeSessionId })
     socket?.close(1000, 'page-close')
     observer.disconnect()
+    renderer.dispose()
     terminal.dispose()
   })
 

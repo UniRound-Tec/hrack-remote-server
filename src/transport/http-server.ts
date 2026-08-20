@@ -39,7 +39,7 @@ const NO_STORE = { 'cache-control': 'no-store' }
 const HTML_SECURITY_HEADERS = {
   ...NO_STORE,
   'content-security-policy':
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   'referrer-policy': 'no-referrer',
   'x-content-type-options': 'nosniff'
 }

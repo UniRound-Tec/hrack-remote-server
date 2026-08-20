@@ -166,6 +166,18 @@ reverse proxy and drove the local real HRack PTY, observed output, released the
 desktop lock, and revoked its room. It passed in 6.5 seconds. The production
 container remained healthy.
 
+A follow-up real Chrome report exposed presentation drift rather than protocol
+corruption: the Claude block logo was rendered with the browser UI/system font,
+the temporary two-color theme, and xterm's default renderer. The captured page
+confirmed that no Maple Mono face or HRack renderer controller had loaded. The
+demo now reuses HRack's pinned xterm/WebGL versions, four licensed Maple Mono web
+faces, complete HRack Dark palette, font-ready bootstrap, and WebGL context-loss
+fallback. CSP was extended narrowly with `font-src 'self'`; a font load failure
+still renders the controller instead of leaving a blank page. The browser gate
+now fails if the font is not loaded, the HRack background drifts, renderer
+activation is skipped, or rendered bytes are not acknowledged. The revised page
+again drove and released a real Electron/`cmd.exe` PTY locally.
+
 ## Remaining scope limits
 
 - Single process and single replica only.

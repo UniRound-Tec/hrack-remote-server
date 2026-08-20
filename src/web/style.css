@@ -269,7 +269,7 @@ button.secondary {
   overflow: hidden;
   border: 1px solid #27405f;
   border-radius: 18px;
-  background: #030913;
+  background: #1f1f1f;
 }
 
 .terminal-toolbar {
@@ -294,6 +294,7 @@ button.secondary {
   height: min(62vh, 620px);
   min-height: 320px;
   padding: 12px 8px 6px;
+  background: #1f1f1f;
 }
 
 .terminal-host .xterm {

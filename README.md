@@ -40,4 +40,9 @@ The standalone controller is available at `<BASE_PATH>/demo/` for manually
 pasting a join URL. It accepts only same-origin join URLs, does not persist them,
 and does not implement P5 remote session creation.
 
+Terminal presentation intentionally matches HRack desktop: the same pinned
+xterm core, bundled Maple Mono faces, HRack Dark 16-color palette, and a
+WebGL-to-DOM fallback controller. WebGL is loaded as a separate chunk only when
+the browser supports WebGL2.
+
 See `docs/DEPLOYMENT.md` for runtime and reverse-proxy configuration.
