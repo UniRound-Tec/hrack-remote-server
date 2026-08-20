@@ -115,10 +115,15 @@ The production container remained healthy with zero restarts. This remote-host
 smoke result is intentionally smaller than the 2,000-connection mandatory gate
 because the host is shared with unrelated workloads.
 
-The container currently has a provisional IP-based `PUBLIC_ORIGIN`. It must be
-recreated with the final HTTPS domain before browser use, because the application
-intentionally rejects a mismatched browser `Origin` and never trusts forwarded
-host headers.
+The production container was subsequently recreated with the final HTTPS domain
+as `PUBLIC_ORIGIN`. An internal deployed-interface run sent that browser `Origin`,
+verified the canonical join URL, and passed both WebSocket directions and revoke.
+
+The public certificate was valid for the final domain, but the first public check
+found the reverse proxy pointing back to the host's own public HTTP endpoint. That
+configuration returned a self-referential HTTPS `301` for every request. Public
+WSS validation therefore remains pending until the proxy upstream is changed to
+the relay's loopback listener.
 
 ## Remaining scope limits
 

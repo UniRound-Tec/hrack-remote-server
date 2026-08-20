@@ -86,7 +86,10 @@ The process emits newline-delimited JSON. It never logs request paths, room IDs,
 After launch, validate the deployed target from a separate process:
 
 ```sh
-TARGET_ORIGIN=http://127.0.0.1:8787 TARGET_BASE_PATH=/remote npm run verify:deployed
+TARGET_ORIGIN=http://127.0.0.1:8787 \
+EXPECTED_PUBLIC_ORIGIN=https://hrack.example \
+TARGET_BASE_PATH=/remote \
+npm run verify:deployed
 ```
 
 This creates and pairs a real room, relays marker payloads in both directions over

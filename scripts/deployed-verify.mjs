@@ -50,6 +50,7 @@ class Client {
 
 const targetOrigin = process.env.TARGET_ORIGIN ?? 'http://127.0.0.1:8787'
 const basePath = process.env.TARGET_BASE_PATH ?? '/remote'
+const expectedPublicOrigin = process.env.EXPECTED_PUBLIC_ORIGIN
 const wsOrigin = targetOrigin.replace(/^http/, 'ws')
 const wsUrl = `${wsOrigin}${basePath}/v1/ws`
 const clients = []
@@ -61,11 +62,20 @@ try {
 
   const create = await fetch(`${targetOrigin}${basePath}/v1/rooms`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(expectedPublicOrigin ? { origin: expectedPublicOrigin } : {})
+    },
     body: '{}'
   })
   assert(create.status === 201, 'room creation failed')
   const room = await create.json()
+  if (expectedPublicOrigin) {
+    assert(
+      room.joinUrl === `${expectedPublicOrigin}${basePath}/${room.roomId}`,
+      'canonical public join URL mismatch'
+    )
+  }
 
   const desktop = await Client.connect(wsUrl)
   const phone = await Client.connect(wsUrl)
@@ -115,6 +125,7 @@ try {
     checks: [
       'health',
       'create',
+      ...(expectedPublicOrigin ? ['origin-policy-and-canonical-url'] : []),
       'pair',
       'phone-to-desktop',
       'desktop-to-phone',
