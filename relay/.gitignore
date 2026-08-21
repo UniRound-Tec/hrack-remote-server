@@ -4,12 +4,8 @@ docs/
 playwright-report/
 test-results/
 .env
-.env*.local
 .load-*.env
 .tls-*.env
 .tls-verify/
 *.log
-*.tsbuildinfo
 coverage/
-.shots/
-.next/

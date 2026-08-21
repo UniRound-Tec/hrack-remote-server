@@ -1,48 +1,55 @@
-# HRack Remote Server
+# HRack Platform
 
-Anonymous, single-process HTTP/WebSocket relay for HRack remote control protocol v1.
+HRack 平台单仓库：**web**（平台站，Next.js 16）+ **relay**（远程控制中继，Node 22）。
+落地页、账号体系与配对 URL 控制台在 `web/`；协议转发、房间生命周期在 `relay/`。
 
-This repository intentionally owns no terminal or session business logic. It creates one-desktop/one-phone rooms, validates the vendored v1 protocol, forwards only role-allowed messages, and revokes rooms.
+```
+浏览器 ──► Nginx(TLS) ─┬─ /          → web     (Next.js, :3000)
+                        └─ /remote/   → relay   (Node,     :3000)
+HRack 桌面端 ── 粘贴配对URL / 手机端扫码 ──┘（协议不变）
+```
 
-Requires Node.js 22 or newer.
+## 目录
+
+| 路径 | 内容 |
+|---|---|
+| `web/` | 平台站：落地页（5 语言）、注册登录（P1）、配对 URL 控制台（P3） |
+| `relay/` | 中继：单进程内存态房间，零业务逻辑，服务凭证保护创建 |
+| `deploy/` | `docker-compose.yml`（relay + web + 可选 nginx）与反代示例 |
+| `docs/` | 平台规格（PAIRING-PLATFORM-SPEC）、部署与验证文档 |
+
+## 开发
 
 ```sh
-npm install
-npm run typecheck
-npm test
-npm run e2e
-npm run build
+npm run dev          # 同时拉起 relay(dev) 与 web(next dev)
+npm run dev:web      # 仅 web；端口默认 3000，可用 WEB_PORT=3002 覆盖
+npm run dev:relay    # 仅 relay（tsx src/cli.ts，env 见 relay/README）
 ```
 
-Run a production build locally:
+开发拓扑：web 在前（`:3000`），relay 在后（`:3001`）；web 的 `next.config.ts`
+把 `/remote/*` rewrite 代理到中继（含 WebSocket 升级）。
 
-```powershell
-$env:PUBLIC_ORIGIN = 'http://127.0.0.1:3000'
-$env:ALLOW_INSECURE_LOOPBACK = '1'
-$env:BASE_PATH = '/remote'
-npm run build
-npm start
+## 构建与检查
+
+```sh
+npm run typecheck    # relay + web
+npm run test         # relay 单测/黑盒
+npm run build        # relay 产物 + web standalone 产物
+npm run e2e          # relay Playwright
 ```
 
-`npm run verify:live` builds the production artifacts, launches the CLI as a separate process, calls the real HTTP/WebSocket interfaces, restarts it, and checks captured logs for secrets.
+## 部署（单命令）
 
-## Browser controller demo
+```sh
+cd deploy
+cp .env.example .env   # 填 PUBLIC_ORIGIN / RELAY_SERVICE_TOKEN / BETTER_AUTH_SECRET / PAIRING_ENC_KEY
+docker compose --profile edge up -d --build
+```
 
-The built-in P4 demo controller uses the same protocol and PTY data path as a
-phone client. It is not a simulated terminal:
+不想要 compose 自带 nginx 时，去掉 `--profile edge`，用宿主反代按
+`deploy/nginx.hrack.conf.example` 分流 `/` 与 `/remote/`。
 
-1. Create a room on the generation page and pair its join URL in HRack.
-2. Select **Open browser demo**, then **Connect**.
-3. Select a live AI CLI session and type in the xterm terminal.
-4. Select **Back to sessions** or **Disconnect** to release control.
+安全基线：中继维持单副本、read-only、内存态房间；`/api/auth/*` 与
+`/dashboard` 不落访问日志；SQLite 单文件在 `web-data` 卷，备份即拷贝。
 
-The standalone controller is available at `<BASE_PATH>/demo/` for manually
-pasting a join URL. It accepts only same-origin join URLs, does not persist them,
-and does not implement P5 remote session creation.
-
-Terminal presentation intentionally matches HRack desktop: the same pinned
-xterm core, bundled Maple Mono faces, HRack Dark 16-color palette, and a
-WebGL-to-DOM fallback controller. WebGL is loaded as a separate chunk only when
-the browser supports WebGL2.
-
-See `docs/DEPLOYMENT.md` for runtime and reverse-proxy configuration.
+详见 `docs/PAIRING-PLATFORM-SPEC.md`（平台规格）与 `docs/DEPLOYMENT.md`（中继加固）。

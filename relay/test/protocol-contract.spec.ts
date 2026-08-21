@@ -10,7 +10,9 @@ import {
   parseRemoteFrame
 } from '../src/protocol/remote-protocol.js'
 
-const upstreamSha256 = 'b2fb491998cd18491fbac0822107f4157d8f2a570d54bebcbbf66c2859d3d321'
+// f356bdc（create 帧补 cols/rows）更新了 vendored 协议文件但漏了这里的冻结哈希；
+// 7d6059… 为该提交后文件的真实 sha256，随单仓重组一并修正。
+const upstreamSha256 = '7d60591056e366e763f92922472c5818a09aabebf956530b9b732266ff618d6f'
 const protocolPath = fileURLToPath(
   new URL('../src/protocol/remote-protocol.ts', import.meta.url)
 )

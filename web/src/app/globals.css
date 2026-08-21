@@ -1,0 +1,351 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Fonts — 与主仓同源：Maple Mono（OFL）+ Ammonite 品牌子集（仅 hrack） */
+/* 中文界面字体走 @fontsource/noto-sans-sc（OFL，见 layout.tsx 引入）   */
+/* ------------------------------------------------------------------ */
+
+@font-face {
+  font-family: "Maple Mono";
+  src: url("/fonts/MapleMono-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Maple Mono";
+  src: url("/fonts/MapleMono-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Maple Mono";
+  src: url("/fonts/MapleMono-Italic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Maple Mono";
+  src: url("/fonts/MapleMono-BoldItalic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 700;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "HRack Brand";
+  src: url("/fonts/HRack-brand.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+}
+
+/* ------------------------------------------------------------------ */
+/* HRack Light 主题 token — 逐项取自主仓 src/themes/light.json          */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* 应用内 token 为 #ededec；落地画布更亮一档（画廊留白），其余 token 不动 */
+  --hrack-bg-app: #f6f6f5;
+  --hrack-bg-content: #ffffff;
+  --hrack-bg-surface: #ffffff;
+  --hrack-bg-surface-hover: #fafafa;
+  --hrack-bg-surface-strong: #f5f5f5;
+  --hrack-bg-control: rgb(229 229 229 / 50%);
+  --hrack-bg-control-active: #ffffff;
+  --hrack-bg-overlay: rgb(255 255 255 / 85%);
+  --hrack-text-primary: #171717;
+  --hrack-text-secondary: #262626;
+  --hrack-text-strong: #525252;
+  --hrack-text-muted: #737373;
+  --hrack-text-faint: #a3a3a3;
+  --hrack-text-disabled: rgb(163 163 163 / 70%);
+  --hrack-text-inverse: #ffffff;
+  --hrack-border-default: rgb(0 0 0 / 8%);
+  --hrack-border-subtle: rgb(0 0 0 / 6%);
+  --hrack-border-faint: rgb(0 0 0 / 5%);
+  --hrack-border-strong: rgb(0 0 0 / 15%);
+  --hrack-accent-flame: #ff4500;
+  --hrack-accent-cursor: #b497cf;
+  --hrack-accent-spark: #1a1a1a;
+  --hrack-brand-logo: #7a7a7a;
+  --hrack-brand-logoShine: #1a1a1a;
+  --hrack-brand-logoMuted: #404040;
+  --hrack-status-working: #0369a1;
+  --hrack-status-working-dot: #0ea5e9;
+  --hrack-status-needsYou: #b8860b;
+  --hrack-status-needsYou-dot: #d4a017;
+  --hrack-status-done: #047857;
+  --hrack-status-done-dot: #10b981;
+  --hrack-status-error: #c45c5c;
+  --hrack-status-error-dot: #c45c5c;
+  --hrack-status-idle: #737373;
+  --hrack-status-idle-dot: #d4d4d4;
+  --hrack-status-exited: #a3a3a3;
+  --hrack-status-exited-dot: #a3a3a3;
+  --hrack-sidebar-tint-a: rgb(90 140 255 / 6%);
+  --hrack-sidebar-tint-b: rgb(170 120 220 / 7%);
+  --hrack-shadow-window: rgb(0 0 0 / 10%);
+  --hrack-shadow-popover: rgb(0 0 0 / 25%);
+  --hrack-button-primary-bg: #171717;
+  --hrack-button-primary-bg-hover: #262626;
+  --hrack-button-primary-fg: #ffffff;
+  --hrack-focus-ring: #b497cf;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tailwind v4 @theme inline — 与主仓 src/index.css 同一映射            */
+/* ------------------------------------------------------------------ */
+
+@theme inline {
+  --font-sans:
+    "Noto Sans SC", "PingFang SC", "PingFang TC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Apple SD Gothic Neo", "Malgun Gothic", Meiryo,
+    sans-serif;
+  --font-maple:
+    "Maple Mono", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", ui-monospace,
+    monospace;
+  --font-brand: "HRack Brand", sans-serif;
+
+  --color-app: var(--hrack-bg-app);
+  --color-content: var(--hrack-bg-content);
+  --color-surface: var(--hrack-bg-surface);
+  --color-surface-hover: var(--hrack-bg-surface-hover);
+  --color-surface-strong: var(--hrack-bg-surface-strong);
+  --color-control: var(--hrack-bg-control);
+  --color-control-active: var(--hrack-bg-control-active);
+  --color-overlay: var(--hrack-bg-overlay);
+  --color-text-primary: var(--hrack-text-primary);
+  --color-text-secondary: var(--hrack-text-secondary);
+  --color-text-strong: var(--hrack-text-strong);
+  --color-text-muted: var(--hrack-text-muted);
+  --color-text-faint: var(--hrack-text-faint);
+  --color-text-disabled: var(--hrack-text-disabled);
+  --color-text-inverse: var(--hrack-text-inverse);
+  --color-border-default: var(--hrack-border-default);
+  --color-border-subtle: var(--hrack-border-subtle);
+  --color-border-faint: var(--hrack-border-faint);
+  --color-border-strong: var(--hrack-border-strong);
+  --color-flame: var(--hrack-accent-flame);
+  --color-brand-logo: var(--hrack-brand-logo);
+  --color-brand-logo-shine: var(--hrack-brand-logoShine);
+  --color-brand-logo-muted: var(--hrack-brand-logoMuted);
+  --color-status-working: var(--hrack-status-working);
+  --color-status-working-dot: var(--hrack-status-working-dot);
+  --color-status-needs-you: var(--hrack-status-needsYou);
+  --color-status-needs-you-dot: var(--hrack-status-needsYou-dot);
+  --color-status-done: var(--hrack-status-done);
+  --color-status-done-dot: var(--hrack-status-done-dot);
+  --color-status-error: var(--hrack-status-error);
+  --color-status-error-dot: var(--hrack-status-error-dot);
+  --color-status-idle: var(--hrack-status-idle);
+  --color-status-idle-dot: var(--hrack-status-idle-dot);
+  --color-status-exited: var(--hrack-status-exited);
+  --color-status-exited-dot: var(--hrack-status-exited-dot);
+  --color-button-primary: var(--hrack-button-primary-bg);
+  --color-button-primary-hover: var(--hrack-button-primary-bg-hover);
+  --color-button-primary-fg: var(--hrack-button-primary-fg);
+  --color-focus-ring: var(--hrack-focus-ring);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                 */
+/* ------------------------------------------------------------------ */
+
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--hrack-bg-app);
+  color: var(--hrack-text-primary);
+  font-family: var(--font-sans);
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--hrack-accent-flame) 22%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--hrack-focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 滚动条（主仓 sidebar-scroll 同款） */
+.scroll-fine {
+  scrollbar-color: var(--hrack-scrollbar-thumb, rgb(0 0 0 / 12%)) transparent;
+  scrollbar-width: thin;
+}
+
+/* ------------------------------------------------------------------ */
+/* 注意力动画 — 移植主仓 index.css（needs-you 持续脉冲 / done 三连闪）   */
+/* ------------------------------------------------------------------ */
+
+@keyframes hrack-attention-persistent {
+  0%,
+  100% {
+    border-color: var(--hrack-border-default);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+  }
+  50% {
+    border-color: var(--hrack-status-needsYou);
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--hrack-status-needsYou) 22%, transparent),
+      0 0 18px color-mix(in srgb, var(--hrack-status-needsYou) 30%, transparent);
+  }
+}
+
+@keyframes hrack-attention-complete {
+  0%,
+  100% {
+    border-color: var(--hrack-border-default);
+  }
+  45% {
+    border-color: var(--hrack-status-done);
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--hrack-status-done) 18%, transparent),
+      0 0 14px color-mix(in srgb, var(--hrack-status-done) 26%, transparent);
+  }
+}
+
+.attention-persistent {
+  animation: hrack-attention-persistent 1.6s ease-in-out infinite;
+}
+
+.attention-complete {
+  animation: hrack-attention-complete 0.8s ease-out 3;
+}
+
+/* TextType 光标（gsap → CSS） */
+@keyframes hrack-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.tt-cursor {
+  animation: hrack-cursor-blink 1s step-end infinite;
+}
+
+/* 工作状态点呼吸（主仓 statusDot working = animate-pulse；这里做灯泡呼吸） */
+@keyframes hrack-dot-breathe {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+.dot-breathe {
+  animation: hrack-dot-breathe 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* 管线图（FLOW）：信号点沿轨道流动                                      */
+/* ------------------------------------------------------------------ */
+
+@keyframes hrack-packet {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  94% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+.flow-packet {
+  offset-rotate: 0deg;
+  animation: hrack-packet var(--packet-duration, 4s) linear infinite;
+  animation-delay: var(--packet-delay, 0s);
+}
+
+/* 轨道虚线缓慢流动（静态轨道的生命感） */
+@keyframes hrack-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+.flow-lane {
+  stroke-dasharray: 3 9;
+  animation: hrack-dash 1.2s linear infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* 环境光晕 — 主仓 SidebarTint 的画布（网页版固定锚定在 hero）           */
+/* ------------------------------------------------------------------ */
+
+.ambient-tint {
+  background-image:
+    radial-gradient(
+      85% 70% at 12% 6%,
+      var(--hrack-sidebar-tint-a),
+      transparent 72%
+    ),
+    radial-gradient(
+      95% 85% at 88% 94%,
+      var(--hrack-sidebar-tint-b),
+      transparent 72%
+    );
+  background-repeat: no-repeat;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion                                                       */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .attention-persistent,
+  .attention-complete,
+  .tt-cursor,
+  .dot-breathe,
+  .flow-packet,
+  .flow-lane {
+    animation: none !important;
+  }
+
+  /* SMIL 信号点无法用 CSS 停帧：直接隐藏，轨道保留 */
+  .flow-packet-smil {
+    display: none;
+  }
+
+  .attention-persistent {
+    border-color: var(--hrack-status-needsYou);
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--hrack-status-needsYou) 22%, transparent);
+  }
+
+  .flow-packet {
+    offset-distance: 50%;
+    opacity: 0.9;
+  }
+}

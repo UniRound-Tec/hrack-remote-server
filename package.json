@@ -1,44 +1,18 @@
 {
-  "name": "hrack-remote-server",
+  "name": "hrack-platform",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
+  "description": "HRack 平台单仓库：relay（远程控制中继）+ web（平台站，Next.js）",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:relay": "npm --prefix relay run dev",
+    "dev:web": "node scripts/dev.mjs --only web",
+    "build": "npm --prefix relay run build && npm --prefix web run build",
+    "typecheck": "npm --prefix relay run typecheck && npm --prefix web run typecheck",
+    "test": "npm --prefix relay run test",
+    "e2e": "npm --prefix relay run e2e"
+  },
   "engines": {
     "node": ">=22"
-  },
-  "scripts": {
-    "dev": "tsx src/cli.ts",
-    "start": "node dist/server/cli.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "build:server": "tsc -p tsconfig.build.json",
-    "build:web": "vite build",
-    "build": "npm run build:server && npm run build:web",
-    "pree2e": "npm run build",
-    "e2e": "playwright test",
-    "preverify:live": "npm run build",
-    "verify:live": "tsx scripts/live-verify.ts",
-    "verify:deployed": "node scripts/deployed-verify.mjs",
-    "verify:tls": "tsx scripts/tls-live-verify.ts",
-    "load:gate": "tsx scripts/load-gate.ts"
-  },
-  "dependencies": {
-    "@xterm/addon-fit": "^0.11.0",
-    "@xterm/addon-webgl": "^0.20.0-beta.291",
-    "@xterm/xterm": "^6.1.0-beta.292",
-    "uqr": "^0.1.3",
-    "ws": "^8.21.3"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.62.1",
-    "@types/node": "^22.19.6",
-    "@types/pngjs": "^6.0.5",
-    "@types/ws": "^8.18.1",
-    "jsqr": "^1.4.0",
-    "pngjs": "^7.0.0",
-    "tsx": "^4.20.6",
-    "typescript": "^7.0.2",
-    "vite": "^7.3.6",
-    "vitest": "^4.0.18"
   }
 }
