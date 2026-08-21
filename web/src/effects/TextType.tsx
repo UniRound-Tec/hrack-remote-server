@@ -29,6 +29,8 @@ export interface TextTypeProps extends HTMLAttributes<HTMLElement> {
   textColors?: string[]
   keywords?: string[]
   keywordColor?: string
+  /** 应用到关键词 span 的额外类名（如 whitespace-nowrap 防止换行劈开关键词） */
+  keywordClassName?: string
 }
 
 export default function TextType({
@@ -46,6 +48,7 @@ export default function TextType({
   textColors = [],
   keywords = [],
   keywordColor = '#ff4500',
+  keywordClassName = '',
   ...props
 }: TextTypeProps) {
   const [displayedText, setDisplayedText] = useState('')
@@ -126,14 +129,18 @@ export default function TextType({
     const pattern = new RegExp(`(${escaped.join('|')})`, 'gi')
     return displayedText.split(pattern).map((part, index) =>
       keywords.some((keyword) => keyword.toLowerCase() === part.toLowerCase()) ? (
-        <span key={`${part}-${index}`} style={{ color: keywordColor }}>
+        <span
+          key={`${part}-${index}`}
+          className={keywordClassName || undefined}
+          style={{ color: keywordColor }}
+        >
           {part}
         </span>
       ) : (
         <span key={`${part}-${index}`}>{part}</span>
       )
     )
-  }, [displayedText, keywordColor, keywords])
+  }, [displayedText, keywordClassName, keywordColor, keywords])
 
   return createElement(
     Component,
