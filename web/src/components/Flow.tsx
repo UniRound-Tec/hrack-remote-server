@@ -44,16 +44,24 @@ function Node({
             : 'var(--hrack-border-default)'
         }
       />
-      <text
-        x={x + w / 2}
-        y={y + h / 2 + 4}
-        textAnchor="middle"
-        className="font-sans"
-        fontSize="13"
-        fill="var(--hrack-text-secondary)"
-      >
-        {label}
-      </text>
+      <foreignObject x={x} y={y} width={w} height={h}>
+        <div
+          style={{
+            display: 'flex',
+            height: '100%',
+            width: '100%',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 8px',
+            textAlign: 'center',
+            fontSize: 12.5,
+            lineHeight: 1.3,
+            color: 'var(--hrack-text-secondary)'
+          }}
+        >
+          {label}
+        </div>
+      </foreignObject>
     </g>
   )
 }
@@ -119,10 +127,13 @@ export function Flow() {
   const n = strings.flow.nodes
 
   return (
-    <section id="flow" className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
+    <section
+      id="flow"
+      className="mx-auto w-full max-w-6xl scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28"
+    >
       <Reveal>
         <Eyebrow>flow</Eyebrow>
-        <h2 className="mt-3 max-w-2xl text-[24px] leading-snug font-semibold tracking-wide text-text-primary sm:text-[28px]">
+        <h2 className="mt-3 max-w-2xl text-[26px] leading-snug font-semibold tracking-tight text-text-primary sm:text-[32px]">
           {strings.flow.heading}
         </h2>
         <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-text-muted">
@@ -133,7 +144,7 @@ export function Flow() {
       <Reveal delay={0.08}>
         <div className="mt-10 overflow-x-auto rounded-2xl border border-border-default bg-content p-4 shadow-[0_20px_50px_-30px_var(--hrack-shadow-popover)] sm:p-6">
           <svg
-            viewBox="0 0 660 240"
+            viewBox="0 0 672 240"
             className="h-auto w-full min-w-[560px]"
             role="img"
             aria-label={strings.flow.heading}
@@ -149,7 +160,7 @@ export function Flow() {
             <Node x={520} y={20} w={120} h={48} label={n.tui} />
             <Node x={168} y={182} w={110} h={48} label={n.adapter} />
             <Node x={340} y={182} w={122} h={48} label={n.status} />
-            <Node x={508} y={182} w={132} h={48} label={n.surfaces} />
+            <Node x={508} y={178} w={140} h={56} label={n.surfaces} />
 
             {/* 字节流包（中性深色） */}
             <Packet d={PTY_PATH} begin="0s" dur={3.4} color="var(--hrack-accent-spark)" />
@@ -170,7 +181,7 @@ export function Flow() {
               <p className="font-maple text-[11px] text-text-faint tabular-nums">
                 {String(index + 1).padStart(2, '0')}
               </p>
-              <h3 className="mt-2.5 text-[16px] font-semibold text-text-primary">
+              <h3 className="mt-2.5 text-[16px] font-semibold tracking-tight text-text-primary">
                 {step.title}
               </h3>
               <p className="mt-1.5 text-[13px] leading-relaxed text-text-muted">

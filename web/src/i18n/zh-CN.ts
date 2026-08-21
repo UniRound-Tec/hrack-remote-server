@@ -29,7 +29,9 @@ export const zhCN = {
     github: 'GitHub',
     remote: '生成远程控制 URL',
     platforms: 'Windows · macOS · Linux',
-    license: 'Apache-2.0 · 免费开源'
+    license: 'Apache-2.0 · 免费开源',
+    rackHint: '可拖动 · 与桌面悬浮监控同一面板',
+    rackLabel: 'HRack 悬浮监控'
   },
   login: {
     title: '登录 HRack',
@@ -46,7 +48,12 @@ export const zhCN = {
   },
   rack: {
     heading: 'sessions · live',
-    needsYouHint: 'approve?'
+    needsYouHint: 'approve?',
+    close: '关闭',
+    collapse: '收起',
+    expand: (count: number) => `展开全部 ${count} 个会话`,
+    attention: '需处理',
+    reopen: '显示悬浮监控'
   },
   states: {
     heading: '一套状态语言，认得所有 Agent',

@@ -26,7 +26,9 @@ export const ko = {
     github: 'GitHub',
     remote: '원격 제어 URL 생성',
     platforms: 'Windows · macOS · Linux',
-    license: 'Apache-2.0 · 무료 오픈소스'
+    license: 'Apache-2.0 · 무료 오픈소스',
+    rackHint: '드래그 가능 · 데스크톱 플로팅 모니터와 같은 패널',
+    rackLabel: 'HRack 플로팅 모니터'
   },
   login: {
     title: 'HRack 로그인',
@@ -43,7 +45,12 @@ export const ko = {
   },
   rack: {
     heading: 'sessions · live',
-    needsYouHint: 'approve?'
+    needsYouHint: 'approve?',
+    close: '닫기',
+    collapse: '접기',
+    expand: (count: number) => `세션 ${count}개 모두 보기`,
+    attention: '확인 필요',
+    reopen: '플로팅 모니터 표시'
   },
   states: {
     heading: '하나의 상태 언어로 모든 에이전트 읽기',

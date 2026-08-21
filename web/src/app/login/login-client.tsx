@@ -21,7 +21,7 @@ export function LoginClient() {
         <Reveal className="w-full max-w-md">
           <div className="rounded-2xl border border-border-default bg-content p-10 text-center shadow-[0_24px_60px_-30px_var(--hrack-shadow-popover)]">
             <Brand className="text-[30px]" />
-            <h1 className="mt-7 text-[22px] font-semibold tracking-wide text-text-primary">
+            <h1 className="mt-7 text-[22px] font-semibold tracking-tight text-text-primary">
               {strings.login.title}
             </h1>
             <p className="mt-3 text-[14px] leading-relaxed text-text-muted">

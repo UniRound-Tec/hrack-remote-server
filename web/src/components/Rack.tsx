@@ -1,5 +1,6 @@
 'use client'
 
+import { ChevronDown, X } from 'lucide-react'
 import { useLang } from '@/i18n/lang-context'
 import { getAdapterIcon } from '@/lib/adapterIcons'
 import { statusDot, statusLabel, statusTone } from '@/lib/session-status'
@@ -8,25 +9,80 @@ import { Brand } from './Brand'
 
 /**
  * 签名元素：活的 rack。
- * 结构镜像主仓 Sidebar 会话卡（图标 · 名称 · 状态点 · 状态行），
- * needs-you 触发主仓同款琥珀色注意力脉冲 —— 页面即产品。
+ * 结构镜像主仓 Sidebar 会话卡；折叠 / 关闭复刻主仓 FloatingApp。
  */
-export function Rack({ states }: { states: readonly RackRuntimeState[] }) {
+export function Rack({
+  states,
+  attentionCount = 0,
+  onClose,
+  expand
+}: {
+  states: readonly RackRuntimeState[]
+  attentionCount?: number
+  onClose?: () => void
+  expand?: {
+    expanded: boolean
+    total: number
+    onToggle: () => void
+  }
+}) {
   const { strings } = useLang()
 
   return (
-    <div data-testid="rack-panel" className="overflow-hidden rounded-2xl border border-border-default bg-content shadow-[0_28px_70px_-28px_var(--hrack-shadow-popover)]">
-      <div className="flex items-center justify-between border-b border-border-faint px-5 py-3.5">
+    <div
+      data-testid="rack-panel"
+      data-attention={attentionCount > 0 ? 'persistent' : 'none'}
+      className={`overflow-hidden rounded-2xl border border-border-default bg-content shadow-[0_28px_70px_-28px_var(--hrack-shadow-popover)] ${
+        attentionCount > 0 ? 'attention-persistent' : ''
+      }`}
+    >
+      <div className="flex items-center gap-2 border-b border-border-faint px-3.5 py-2.5">
         <Brand className="text-[18px]" />
-        <p className="font-maple text-[10px] tracking-[0.22em] text-text-faint uppercase">
+        {attentionCount > 0 && (
+          <span className="text-[10px] font-medium text-status-needs-you">
+            <span data-testid="floating-attention-count">{attentionCount}</span>{' '}
+            {strings.rack.attention}
+          </span>
+        )}
+        <p className="ml-auto font-maple text-[10px] tracking-[0.22em] text-text-faint uppercase">
           {strings.rack.heading}
         </p>
+        {onClose && (
+          <button
+            type="button"
+            data-testid="floating-close"
+            aria-label={strings.rack.close}
+            title={strings.rack.close}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={onClose}
+            className="flex size-5 shrink-0 items-center justify-center rounded-md text-text-faint transition-colors hover:bg-surface-hover hover:text-text-secondary"
+          >
+            <X className="size-3" strokeWidth={1.75} />
+          </button>
+        )}
       </div>
       <ul className="flex flex-col gap-1.5 p-2.5">
         {states.map((state) => (
           <RackCard key={state.script.adapterId} state={state} />
         ))}
       </ul>
+      {expand && (
+        <button
+          type="button"
+          data-testid="floating-expand"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={expand.onToggle}
+          className="flex w-full items-center justify-center gap-1 border-t border-border-faint py-1.5 text-[11px] text-text-faint transition-colors hover:bg-surface-hover hover:text-text-secondary"
+        >
+          <ChevronDown
+            className={`size-3 transition-transform ${expand.expanded ? 'rotate-180' : ''}`}
+            strokeWidth={1.75}
+          />
+          {expand.expanded
+            ? strings.rack.collapse
+            : strings.rack.expand(expand.total)}
+        </button>
+      )}
     </div>
   )
 }

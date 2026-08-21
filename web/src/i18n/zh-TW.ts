@@ -26,7 +26,9 @@ export const zhTW = {
     github: 'GitHub',
     remote: '產生遠端控制 URL',
     platforms: 'Windows · macOS · Linux',
-    license: 'Apache-2.0 · 免費開源'
+    license: 'Apache-2.0 · 免費開源',
+    rackHint: '可拖曳 · 與桌面懸浮監控同一面板',
+    rackLabel: 'HRack 懸浮監控'
   },
   login: {
     title: '登入 HRack',
@@ -43,7 +45,12 @@ export const zhTW = {
   },
   rack: {
     heading: 'sessions · live',
-    needsYouHint: 'approve?'
+    needsYouHint: 'approve?',
+    close: '關閉',
+    collapse: '收合',
+    expand: (count: number) => `展開全部 ${count} 個工作階段`,
+    attention: '需處理',
+    reopen: '顯示懸浮監控'
   },
   states: {
     heading: '一套狀態語言，認得所有 Agent',

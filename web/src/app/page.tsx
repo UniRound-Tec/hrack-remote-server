@@ -1,6 +1,7 @@
 'use client'
 
 import { Download } from '@/components/Download'
+import { FloatingRack } from '@/components/FloatingRack'
 import { Flow } from '@/components/Flow'
 import { Footer } from '@/components/Footer'
 import { Harnesses } from '@/components/Harnesses'
@@ -40,6 +41,7 @@ export default function LandingPage() {
         </div>
       </main>
       <Footer />
+      <FloatingRack />
     </>
   )
 }

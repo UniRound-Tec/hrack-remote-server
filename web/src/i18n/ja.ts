@@ -26,7 +26,9 @@ export const ja = {
     github: 'GitHub',
     remote: 'リモート URL を生成',
     platforms: 'Windows · macOS · Linux',
-    license: 'Apache-2.0 · 無料オープンソース'
+    license: 'Apache-2.0 · 無料オープンソース',
+    rackHint: 'ドラッグできます · デスクトップのフローティングモニターと同じパネル',
+    rackLabel: 'HRack フローティングモニター'
   },
   login: {
     title: 'HRack にサインイン',
@@ -43,7 +45,12 @@ export const ja = {
   },
   rack: {
     heading: 'sessions · live',
-    needsYouHint: 'approve?'
+    needsYouHint: 'approve?',
+    close: '閉じる',
+    collapse: '折りたたむ',
+    expand: (count: number) => `${count} 件すべて表示`,
+    attention: '要対応',
+    reopen: 'フローティングモニターを表示'
   },
   states: {
     heading: 'ひとつの状態言語で、すべてのエージェントを読む',

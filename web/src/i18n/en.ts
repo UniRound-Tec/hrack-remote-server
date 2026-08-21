@@ -27,7 +27,9 @@ export const en = {
     github: 'GitHub',
     remote: 'Generate remote URL',
     platforms: 'Windows · macOS · Linux',
-    license: 'Apache-2.0 · free & open source'
+    license: 'Apache-2.0 · free & open source',
+    rackHint: 'Drag it — same panel as the desktop floating monitor',
+    rackLabel: 'HRack floating monitor'
   },
   login: {
     title: 'Sign in to HRack',
@@ -44,7 +46,12 @@ export const en = {
   },
   rack: {
     heading: 'sessions · live',
-    needsYouHint: 'approve?'
+    needsYouHint: 'approve?',
+    close: 'Close',
+    collapse: 'Collapse',
+    expand: (count: number) => `Show all ${count} sessions`,
+    attention: 'need you',
+    reopen: 'Show floating monitor'
   },
   states: {
     heading: 'One status language for every agent',
