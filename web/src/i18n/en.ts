@@ -17,7 +17,10 @@ export const en = {
   hero: {
     title: 'The modern terminal for coding agents.',
     keyword: 'terminal',
-    sub: 'The native TUI stays untouched. HRack watches who is thinking, who is calling tools, and who is waiting on you \u2014 so you can look away and land back in the right place.',
+    sub: [
+      'The native TUI stays untouched. Who\u2019s thinking, who\u2019s calling tools, who\u2019s waiting on you \u2014 at a glance.',
+      'HRack watches every light, so you can look away and land back in the right place.'
+    ],
     promptNeedsYou: (n: number) =>
       n === 1 ? '1 session waiting on you' : `${n} sessions waiting on you`,
     promptErrors: (n: number) => (n === 1 ? '1 error' : `${n} errors`),

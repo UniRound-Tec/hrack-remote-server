@@ -17,7 +17,10 @@ export const zhTW = {
   hero: {
     title: '一個為 Coding Agent 打造的現代終端機。',
     keyword: '終端機',
-    sub: '原生 TUI 一字不改。誰在思考、誰在呼叫工具、誰在等你確認 —— rack 替你盯著每一盞燈，你只管回到正確的地方。',
+    sub: [
+      '原生 TUI 一字不改。誰在思考、誰在呼叫工具、誰在等你確認，一目了然。',
+      'HRack 替你盯著每一盞燈，你只管回到正確的地方。'
+    ],
     promptNeedsYou: (n: number) => `${n} 個會話等你確認`,
     promptErrors: (n: number) => `${n} 個會話出錯`,
     promptWorking: (n: number) => `${n} 個進行中`,

@@ -20,7 +20,10 @@ export const zhCN = {
   hero: {
     title: '一个为 Coding Agent 打造的现代终端。',
     keyword: '终端',
-    sub: '原生 TUI 一字不改。谁在思考、谁在调用工具、谁在等你确认 —— rack 替你盯着每一盏灯，你只管回到正确的地方。',
+    sub: [
+      '原生 TUI 一字不改。谁在思考、谁在调用工具、谁在等你确认，一目了然。',
+      'HRack 替你盯着每一盏灯，你只管回到正确的地方。'
+    ],
     promptNeedsYou: (n: number) => `${n} 个会话等你确认`,
     promptErrors: (n: number) => `${n} 个会话出错`,
     promptWorking: (n: number) => `${n} 个进行中`,

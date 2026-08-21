@@ -17,7 +17,10 @@ export const ko = {
   hero: {
     title: '코딩 에이전트를 위한 모던 터미널.',
     keyword: '터미널',
-    sub: '네이티브 TUI 는 그대로. 누가 사고하고, 누가 도구를 쓰고, 누가 당신의 확인을 기다리는지 —— rack 이 모든 램프를 지켜봅니다. 당신은 옳은 자리로 돌아가면 됩니다.',
+    sub: [
+      '네이티브 TUI 는 그대로. 누가 생각하고, 도구를 쓰고, 확인을 기다리는지 한눈에 보입니다.',
+      'HRack 이 모든 램프를 지켜봅니다. 당신은 옳은 자리로 돌아가면 됩니다.'
+    ],
     promptNeedsYou: (n: number) => `확인 대기 ${n}건`,
     promptErrors: (n: number) => `오류 ${n}건`,
     promptWorking: (n: number) => `진행 중 ${n}건`,
