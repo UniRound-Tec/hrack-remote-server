@@ -19,8 +19,8 @@ const nextConfig: NextConfig = {
   turbopack: { root },
   // Docker 部署走 standalone 产物（见 web/Dockerfile）
   output: 'standalone',
-  // dev 下允许 127.0.0.1 访问（HMR 握手被默认跨域拦截）
-  allowedDevOrigins: ['http://127.0.0.1', 'http://localhost'],
+  // dev 下允许 127.0.0.1 访问（HMR 握手被默认跨域拦截；值不带协议，见 Next 文档）
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
   async rewrites() {
     return [
       {
