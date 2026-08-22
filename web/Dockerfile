@@ -12,6 +12,9 @@ RUN npm run build
 FROM node:22.23.0-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
+# Next standalone otherwise inherits Docker's container ID as HOSTNAME and
+# does not listen on 127.0.0.1, causing the image healthcheck to false-fail.
+ENV HOSTNAME=0.0.0.0
 WORKDIR /app
 
 # standalone 产物自带最小 node_modules；静态资源与字体单独拷贝

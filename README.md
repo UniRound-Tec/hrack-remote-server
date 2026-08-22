@@ -13,10 +13,9 @@ HRack 桌面端 ── 粘贴配对URL / 手机端扫码 ──┘（协议不�
 
 | 路径 | 内容 |
 |---|---|
-| `web/` | 平台站：落地页（5 语言）、注册登录（P1）、配对 URL 控制台（P3） |
+| `web/` | 平台站：落地页（5 语言）、账号/OAuth、运营后台与配对控制台 |
 | `relay/` | 中继：单进程内存态房间，零业务逻辑，服务凭证保护创建 |
 | `deploy/` | `docker-compose.yml`（relay + web + 可选 nginx）与反代示例 |
-| `docs/` | 平台规格（PAIRING-PLATFORM-SPEC）、部署与验证文档 |
 
 ## 开发
 
@@ -33,7 +32,7 @@ npm run dev:relay    # 仅 relay（tsx src/cli.ts，env 见 relay/README）
 
 ```sh
 npm run typecheck    # relay + web
-npm run test         # relay 单测/黑盒
+npm run test         # relay + web 单测/黑盒
 npm run build        # relay 产物 + web standalone 产物
 npm run e2e          # relay Playwright
 ```
@@ -61,8 +60,33 @@ docker compose --profile tools run --rm web-tools create-admin \
 
 CLI 会提示输入密码。`web-tools` 以 `1000:1000` 运行并共享 Web 的 SQLite 卷；不要改用 root 或 `npx @latest`。也不要依赖 CLI 默认发现配置：Compose 包装器会把固定的 `--config better-auth.config.ts` 放到 pinned `auth@1.7.1` 所要求的子命令后。`ADMIN_BOOTSTRAP_EMAIL` 只会在正常 OTP/OAuth 注册成功后提权，不是无邮件逃生路径。
 
-安全基线：中继维持单副本、read-only、内存态房间；`/api/auth/*` 与
-`/api/admin/*`、`/dashboard` 与 `/admin` 不落访问日志；SQLite 单文件在
-`web-data` 卷，备份即拷贝。
+### 邮件与 OAuth
 
-详见 `docs/PAIRING-PLATFORM-SPEC.md`（平台规格）与 `docs/DEPLOYMENT.md`（中继加固）。
+默认不强制邮箱验证，注册后可直接登录。要强制验证时，先在 `/admin/mail`
+保存并测试邮件配置，再开启开关；代码路径同时设置
+`emailAndPassword.requireEmailVerification` 与 GitHub/Google 的同名 provider
+选项，避免 OAuth 绕过。邮件及 OAuth secret 使用 AES-256-GCM 存入
+`web-data`；设置 `SETTINGS_ENC_KEY` 可与配对密钥隔离，否则复用
+`PAIRING_ENC_KEY`。
+
+OAuth 可在 `/admin/oauth` 配置，也可由环境变量钉死。Provider 控制台的回调地址为：
+
+```text
+${PUBLIC_ORIGIN}/api/auth/callback/github
+${PUBLIC_ORIGIN}/api/auth/callback/google
+```
+
+GitHub 需授权 `user:email`；私有主邮箱会从 `/user/emails` 解析。Provider
+仍未返回邮箱时不会创建账号，而是回到 `/auth?error=email_not_found`。
+
+### 安全基线
+
+- 全站下发 CSP：资源、连接和表单仅允许同源，禁止 object/iframe 与被嵌入。
+  Next 静态 header 为 hydration 保留 `'unsafe-inline'`；`'unsafe-eval'` 仅开发态启用。
+- Session Cookie 为 HTTPOnly、SameSite=Lax，HTTPS 下为 Secure；缓存关闭，禁用、删号和重置密码会立即撤销会话。
+- `/api/admin/*` 写操作校验可信 Origin 并限流；最后一位有效管理员不能被禁用、删除或降级；impersonation 端点禁用。
+- SMTP/OAuth secret、密码、OTP、Cookie、Authorization、setup token 与配对 token 不进入 API 响应、审计字段或访问日志。
+- `/api/auth/*`、`/api/admin/*`、`/dashboard` 与 `/admin` 在 Nginx 示例中关闭访问日志；SQLite 位于 `web-data` 卷，升级或回滚前先备份。
+
+中继继续维持单副本、read-only、无状态卷；房间仅驻留内存，Web 只通过
+`RELAY_SERVICE_TOKEN` 创建并持有加密的撤销凭据。
