@@ -1,5 +1,5 @@
-import { AdminPlaceholder } from '@/components/admin/AdminPlaceholder'
+import { MailSettingsPanel } from '@/components/admin/MailSettingsPanel'
 
 export default function AdminMailPage() {
-  return <AdminPlaceholder section="mail" />
+  return <MailSettingsPanel />
 }

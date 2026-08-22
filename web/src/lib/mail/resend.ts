@@ -3,7 +3,7 @@ import {
   type CreateEmailOptions,
   type CreateEmailResponse
 } from 'resend'
-import { verificationEmail } from './message'
+import { testEmail, verificationEmail } from './message'
 import type { MailProvider } from './types'
 
 export type ResendConfig = {
@@ -21,17 +21,24 @@ export function createResendProvider(
   config: ResendConfig,
   client: ResendClient = new Resend(config.apiKey)
 ): MailProvider {
+  async function send(email: string, content: ReturnType<typeof testEmail>) {
+    const result = await client.emails.send({
+      from: config.from,
+      to: email,
+      ...content
+    })
+    if (result.error) {
+      throw new Error('Resend rejected the verification email')
+    }
+  }
+
   return {
     kind: 'resend',
     async send(message) {
-      const result = await client.emails.send({
-        from: config.from,
-        to: message.email,
-        ...verificationEmail(message.otp)
-      })
-      if (result.error) {
-        throw new Error('Resend rejected the verification email')
-      }
+      await send(message.email, verificationEmail(message.otp))
+    },
+    async sendTest(email) {
+      await send(email, testEmail())
     }
   }
 }

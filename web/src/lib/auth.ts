@@ -25,6 +25,9 @@ export function reloadAuth(): Promise<void> {
     .catch(() => undefined)
     .then(() => {
       current = createAuth(undefined, [nextCookies()])
+      console.info(
+        JSON.stringify({ event: 'auth.reload', outcome: 'success' })
+      )
     })
   return reloadChain
 }

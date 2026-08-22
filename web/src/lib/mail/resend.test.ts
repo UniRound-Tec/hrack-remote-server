@@ -27,6 +27,14 @@ describe('Resend provider', () => {
         html: expect.stringContaining('654321')
       })
     )
+
+    await provider.sendTest('operator@example.test')
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        to: 'operator@example.test',
+        subject: 'HRack mail delivery test'
+      })
+    )
   })
 
   it('turns an API error result into a rejected send', async () => {

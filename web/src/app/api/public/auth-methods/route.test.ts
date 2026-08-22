@@ -12,7 +12,9 @@ describe('GET /api/public/auth-methods', () => {
     vi.stubEnv('GOOGLE_CLIENT_ID', '')
     vi.stubEnv('GOOGLE_CLIENT_SECRET', '')
     vi.stubEnv('EMAIL_VERIFICATION_REQUIRED', '')
-    expect(await GET().json()).toEqual({
+    const response = GET()
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(await response.json()).toEqual({
       github: false,
       google: false,
       emailVerificationRequired: false

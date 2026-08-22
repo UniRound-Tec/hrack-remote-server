@@ -7,6 +7,7 @@ import { getDb } from './db'
 import * as schema from './db/schema'
 import { isMailReady, sendVerificationOTP } from './mail/provider'
 import { deleteUnverifiedCredentialOnlyUserByEmail } from './oauth-link'
+import { loadTrustedOrigins } from './settings/trusted-origins'
 import {
   loadRuntimeConfig,
   type RuntimeAuthConfig
@@ -21,9 +22,7 @@ export function createAuth(
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(getDb(), { provider: 'sqlite', schema }),
-    trustedOrigins: [process.env.BETTER_AUTH_URL].filter(
-      (origin): origin is string => Boolean(origin)
-    ),
+    trustedOrigins: loadTrustedOrigins(),
     disabledPaths: [
       '/sign-in/email-otp',
       '/email-otp/request-password-reset',
@@ -169,7 +168,9 @@ export function createAuth(
             })
           }
           void sendVerificationOTP({ email, otp, type }).catch(() => {
-            console.error('[mail.send_fail]')
+            console.error(
+              JSON.stringify({ event: 'mail.send_fail', outcome: 'failed' })
+            )
           })
         }
       }),

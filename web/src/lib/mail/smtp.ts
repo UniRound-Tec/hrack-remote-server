@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 import type SMTPTransport from 'nodemailer/lib/smtp-transport'
-import { verificationEmail } from './message'
+import { testEmail, verificationEmail } from './message'
 import type { MailProvider } from './types'
 
 export type SmtpSecurity = 'tls' | 'starttls' | 'none'
@@ -35,18 +35,24 @@ export function smtpTransportOptions(
 export function createSmtpProvider(config: SmtpConfig): MailProvider {
   const transport = nodemailer.createTransport(smtpTransportOptions(config))
 
+  async function send(email: string, content: ReturnType<typeof testEmail>) {
+    const result = await transport.sendMail({
+      from: config.from,
+      to: email,
+      ...content
+    })
+    if (result.rejected.length > 0) {
+      throw new Error('SMTP rejected the verification email')
+    }
+  }
+
   return {
     kind: 'smtp',
     async send(message) {
-      const content = verificationEmail(message.otp)
-      const result = await transport.sendMail({
-        from: config.from,
-        to: message.email,
-        ...content
-      })
-      if (result.rejected.length > 0) {
-        throw new Error('SMTP rejected the verification email')
-      }
+      await send(message.email, verificationEmail(message.otp))
+    },
+    async sendTest(email) {
+      await send(email, testEmail())
     }
   }
 }

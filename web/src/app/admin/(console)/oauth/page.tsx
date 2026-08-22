@@ -1,5 +1,5 @@
-import { AdminPlaceholder } from '@/components/admin/AdminPlaceholder'
+import { OAuthSettingsPanel } from '@/components/admin/OAuthSettingsPanel'
 
 export default function AdminOAuthPage() {
-  return <AdminPlaceholder section="oauth" />
+  return <OAuthSettingsPanel />
 }

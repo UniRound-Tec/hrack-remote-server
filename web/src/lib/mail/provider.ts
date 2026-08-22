@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { getDb } from '../db'
 import { otpSendGuard } from '../db/schema'
+import { readSetting } from '../settings/store'
 import { emptyToUndef } from '../settings/resolve'
 import { sendConsoleOtp } from './console'
 import { createResendProvider } from './resend'
@@ -24,7 +25,10 @@ export class MailUnavailableError extends Error {
 
 const consoleProvider: MailProvider = {
   kind: 'console',
-  send: sendConsoleOtp
+  send: sendConsoleOtp,
+  async sendTest() {
+    console.info('[mail.console] delivery test suppressed')
+  }
 }
 
 const RESEND_SANDBOX_FROM = 'HRack <onboarding@resend.dev>'
@@ -41,7 +45,9 @@ function parseSecurity(value: string | undefined): SmtpSecurity | undefined {
     : undefined
 }
 
-function resolveSmtpConfig(stored?: SmtpConfig | null): SmtpConfig | undefined {
+export function resolveSmtpConfig(
+  stored?: SmtpConfig | null
+): SmtpConfig | undefined {
   const host = emptyToUndef(process.env.SMTP_HOST) ?? stored?.host
   const envPort = emptyToUndef(process.env.SMTP_PORT)
   const port = envPort === undefined ? stored?.port : parsePort(envPort)
@@ -60,6 +66,12 @@ function resolveSmtpConfig(stored?: SmtpConfig | null): SmtpConfig | undefined {
   }
   if (Boolean(username) !== Boolean(password)) return undefined
   return { host, port, security, username, password, from }
+}
+
+export function loadStoredSmtpForResolution(): SmtpConfig | undefined {
+  if (emptyToUndef(process.env.MAIL_PROVIDER) !== undefined) return undefined
+  if (resolveSmtpConfig() !== undefined) return undefined
+  return readSetting('smtp')
 }
 
 function resendProvider(): MailProvider | undefined {
@@ -100,9 +112,11 @@ export async function resolveMailProvider(
   throw new MailUnavailableError()
 }
 
-export async function isMailReady(): Promise<boolean> {
+export async function isMailReady(
+  storedSmtp = loadStoredSmtpForResolution()
+): Promise<boolean> {
   try {
-    await resolveMailProvider()
+    await resolveMailProvider(storedSmtp)
     return true
   } catch (error) {
     if (error instanceof MailUnavailableError) return false
@@ -151,7 +165,7 @@ export async function sendVerificationOTP({
   otp: string
   type: 'email-verification'
 }): Promise<void> {
-  const provider = await resolveMailProvider()
+  const provider = await resolveMailProvider(loadStoredSmtpForResolution())
 
   const normalized = email.trim().toLowerCase()
   const now = Date.now()

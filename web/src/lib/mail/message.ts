@@ -26,3 +26,11 @@ export function verificationEmail(otp: string): VerificationEmail {
     ].join('')
   }
 }
+
+export function testEmail(): VerificationEmail {
+  return {
+    subject: 'HRack mail delivery test',
+    text: 'HRack can deliver email with the current operator settings.',
+    html: '<p>HRack can deliver email with the current operator settings.</p>'
+  }
+}

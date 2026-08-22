@@ -1,3 +1,6 @@
+import { readSetting } from './store'
+import type { SettingsSource, StoredOAuthProvider } from './types'
+
 export type OAuthRuntimeConfig = {
   clientId: string
   clientSecret: string
@@ -16,10 +19,11 @@ export function emptyToUndef(value: string | undefined): string | undefined {
 
 function envPair(
   id: string | undefined,
-  secret: string | undefined
+  secret: string | undefined,
+  stored?: StoredOAuthProvider
 ): OAuthRuntimeConfig | undefined {
-  const clientId = emptyToUndef(id)
-  const clientSecret = emptyToUndef(secret)
+  const clientId = emptyToUndef(id) ?? stored?.clientId
+  const clientSecret = emptyToUndef(secret) ?? stored?.clientSecret
   return clientId && clientSecret ? { clientId, clientSecret } : undefined
 }
 
@@ -33,17 +37,40 @@ export function readEmailVerificationRequired(
   throw new Error('EMAIL_VERIFICATION_REQUIRED must be true, false, 1, or 0')
 }
 
-/** PR2 reads the env overlay. PR5 extends this resolver with encrypted DB values. */
+export function verificationSetting(): {
+  value: boolean
+  source: SettingsSource
+  pinned: boolean
+} {
+  if (emptyToUndef(process.env.EMAIL_VERIFICATION_REQUIRED) !== undefined) {
+    return {
+      value: readEmailVerificationRequired(),
+      source: 'env',
+      pinned: true
+    }
+  }
+  const stored = readSetting('emailVerificationRequired')
+  return stored === undefined
+    ? { value: false, source: 'default', pinned: false }
+    : { value: stored, source: 'db', pinned: false }
+}
+
 export function loadRuntimeConfig(): RuntimeAuthConfig {
+  const githubEnvId = emptyToUndef(process.env.GITHUB_CLIENT_ID)
+  const githubEnvSecret = emptyToUndef(process.env.GITHUB_CLIENT_SECRET)
+  const googleEnvId = emptyToUndef(process.env.GOOGLE_CLIENT_ID)
+  const googleEnvSecret = emptyToUndef(process.env.GOOGLE_CLIENT_SECRET)
   return {
-    emailVerificationRequired: readEmailVerificationRequired(),
+    emailVerificationRequired: verificationSetting().value,
     github: envPair(
-      process.env.GITHUB_CLIENT_ID,
-      process.env.GITHUB_CLIENT_SECRET
+      githubEnvId,
+      githubEnvSecret,
+      githubEnvId && githubEnvSecret ? undefined : readSetting('github')
     ),
     google: envPair(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET
+      googleEnvId,
+      googleEnvSecret,
+      googleEnvId && googleEnvSecret ? undefined : readSetting('google')
     )
   }
 }
