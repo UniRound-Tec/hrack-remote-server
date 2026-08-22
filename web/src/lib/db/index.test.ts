@@ -55,4 +55,3 @@ describe('getDb', () => {
     expect(fs.existsSync(path.join(dir, 'app.db'))).toBe(true)
   })
 })
-

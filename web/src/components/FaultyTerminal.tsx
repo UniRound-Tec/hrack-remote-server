@@ -72,7 +72,7 @@ float hash21(vec2 p){
 
 float noise(vec2 p)
 {
-  return sin(p.x * 10.0) * sin(p.y * (3.0 + sin(time * 0.090909))) + 0.2; 
+  return sin(p.x * 10.0) * sin(p.y * (3.0 + sin(time * 0.090909))) + 0.2;
 }
 
 mat2 rotate(float angle)
@@ -87,20 +87,20 @@ float fbm(vec2 p)
   p *= 1.1;
   float f = 0.0;
   float amp = 0.5 * uNoiseAmp;
-  
+
   mat2 modify0 = rotate(time * 0.02);
   f += amp * noise(p);
   p = modify0 * p * 2.0;
   amp *= 0.454545;
-  
+
   mat2 modify1 = rotate(time * 0.02);
   f += amp * noise(p);
   p = modify1 * p * 2.0;
   amp *= 0.454545;
-  
+
   mat2 modify2 = rotate(time * 0.08);
   f += amp * noise(p);
-  
+
   return f;
 }
 
@@ -109,7 +109,7 @@ float pattern(vec2 p, out vec2 q, out vec2 r) {
   vec2 offset0 = vec2(0.0);
   mat2 rot01 = rotate(0.1 * time);
   mat2 rot1 = rotate(0.1);
-  
+
   q = vec2(fbm(p + offset1), fbm(rot01 * p + offset1));
   r = vec2(fbm(rot1 * q + offset0), fbm(q + offset0));
   return fbm(p + r);
@@ -121,42 +121,42 @@ float digit(vec2 p){
     p = p * grid;
     vec2 q, r;
     float intensity = pattern(s * 0.1, q, r) * 1.3 - 0.03;
-    
+
     if(uUseMouse > 0.5){
         vec2 mouseWorld = uMouse * uScale;
         float distToMouse = distance(s, mouseWorld);
         float mouseInfluence = exp(-distToMouse * 8.0) * uMouseStrength * 10.0;
         intensity += mouseInfluence;
-        
+
         float ripple = sin(distToMouse * 20.0 - iTime * 5.0) * 0.1 * mouseInfluence;
         intensity += ripple;
     }
-    
+
     if(uUsePageLoadAnimation > 0.5){
         float cellRandom = fract(sin(dot(s, vec2(12.9898, 78.233))) * 43758.5453);
         float cellDelay = cellRandom * 0.8;
         float cellProgress = clamp((uPageLoadProgress - cellDelay) / 0.2, 0.0, 1.0);
-        
+
         float fadeAlpha = smoothstep(0.0, 1.0, cellProgress);
         intensity *= fadeAlpha;
     }
-    
+
     p = fract(p);
     p *= uDigitSize;
-    
+
     float px5 = p.x * 5.0;
     float py5 = (1.0 - p.y) * 5.0;
     float x = fract(px5);
     float y = fract(py5);
-    
+
     float i = floor(py5) - 2.0;
     float j = floor(px5) - 2.0;
     float n = i * i + j * j;
     float f = n * 0.0625;
-    
+
     float isOn = step(0.1, intensity - f);
     float brightness = isOn * (0.2 + y * 0.8) * (0.75 + x * 0.25);
-    
+
     return step(0.0, p.x) * step(p.x, 1.0) * step(0.0, p.y) * step(p.y, 1.0) * brightness;
 }
 
@@ -173,10 +173,10 @@ float displace(vec2 look)
 }
 
 vec3 getColor(vec2 p){
-    
+
     float bar = step(mod(p.y + time * 20.0, 1.0), 0.2) * 0.4 + 1.0;
     bar *= uScanlineIntensity;
-    
+
     float displacement = displace(p);
     p.x += displacement;
 
@@ -186,12 +186,12 @@ vec3 getColor(vec2 p){
     }
 
     float middle = digit(p);
-    
+
     const float off = 0.002;
     float sum = digit(p + vec2(-off, -off)) + digit(p + vec2(0.0, -off)) + digit(p + vec2(off, -off)) +
                 digit(p + vec2(-off, 0.0)) + digit(p + vec2(0.0, 0.0)) + digit(p + vec2(off, 0.0)) +
                 digit(p + vec2(-off, off)) + digit(p + vec2(0.0, off)) + digit(p + vec2(off, off));
-    
+
     vec3 baseColor = vec3(0.9) * middle + sum * 0.1 * vec3(1.0) * bar;
     return baseColor;
 }
@@ -210,7 +210,7 @@ void main() {
     if(uCurvature != 0.0){
       uv = barrel(uv);
     }
-    
+
     vec2 p = uv * uScale;
     vec3 col = getColor(p);
 
