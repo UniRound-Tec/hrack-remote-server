@@ -9,7 +9,7 @@
     "dev:web": "node scripts/dev.mjs --only web",
     "build": "npm --prefix relay run build && npm --prefix web run build",
     "typecheck": "npm --prefix relay run typecheck && npm --prefix web run typecheck",
-    "test": "npm --prefix relay run test",
+    "test": "npm --prefix relay run test && npm --prefix web run test",
     "e2e": "npm --prefix relay run e2e"
   },
   "engines": {

@@ -13,3 +13,7 @@ test-results/
 coverage/
 .shots/
 .next/
+web/data/
+*.db
+*.db-wal
+*.db-shm

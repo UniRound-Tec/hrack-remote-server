@@ -6,3 +6,7 @@ next-env.d.ts
 .env*.local
 
 .shots/
+data/
+*.db
+*.db-wal
+*.db-shm
