@@ -144,7 +144,8 @@ export function createAuth(
         if (
           ctx.path === '/admin/set-role' ||
           ctx.path === '/admin/ban-user' ||
-          ctx.path === '/admin/remove-user'
+          ctx.path === '/admin/remove-user' ||
+          ctx.path === '/admin/update-user'
         ) {
           await assertNotLastAdmin(ctx)
         }

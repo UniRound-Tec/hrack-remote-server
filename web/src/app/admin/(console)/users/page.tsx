@@ -1,5 +1,5 @@
-import { AdminPlaceholder } from '@/components/admin/AdminPlaceholder'
+import { UserManagementPanel } from '@/components/admin/UserManagementPanel'
 
 export default function AdminUsersPage() {
-  return <AdminPlaceholder section="users" />
+  return <UserManagementPanel />
 }

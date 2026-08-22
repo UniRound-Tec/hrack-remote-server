@@ -1,4 +1,5 @@
 import { reloadAuth } from '../auth'
+import { recordAudit } from '../admin/audit'
 import {
   isMailReady,
   loadStoredSmtpForResolution,
@@ -232,6 +233,7 @@ export function saveMailSettings(
       await reloadAuth()
     }
     logUpdate(actorId, fields)
+    recordAudit(actorId, 'settings.mail.update', 'mail', fields)
     return getMailSettingsView()
   })
 }
@@ -247,14 +249,22 @@ export function clearMailSettings(actorId: string): Promise<MailSettingsView> {
     ].some(Boolean)
     if (changed) await reloadAuth()
     logUpdate(actorId, ['smtp', 'emailVerificationRequired'])
+    recordAudit(actorId, 'settings.mail.clear', 'mail', [
+      'emailVerificationRequired',
+      'smtp'
+    ])
     return getMailSettingsView()
   })
 }
 
-export async function sendMailTest(email: string): Promise<void> {
+export async function sendMailTest(
+  email: string,
+  actorId?: string
+): Promise<void> {
   try {
     const provider = await resolveMailProvider(loadStoredSmtpForResolution())
     await provider.sendTest(email)
+    if (actorId) recordAudit(actorId, 'settings.mail.test', 'mail')
   } catch {
     console.error(
       JSON.stringify({ event: 'mail.send_fail', outcome: 'test_failed' })
@@ -308,6 +318,12 @@ export function saveOAuthSettings(
     }
     await reloadAuth()
     logUpdate(actorId, [`oauth.${input.provider}`])
+    recordAudit(
+      actorId,
+      input.enabled ? 'settings.oauth.update' : 'settings.oauth.clear',
+      `oauth.${input.provider}`,
+      ['clientId', 'clientSecret', 'enabled']
+    )
     return getOAuthSettingsView()
   })
 }

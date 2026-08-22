@@ -23,7 +23,13 @@ export async function assertNotLastAdmin(
   ctx: AdminMutationContext
 ): Promise<void> {
   const user = authSchema.user
-  const body = ctx.body as { userId?: string; role?: string | string[] } | undefined
+  const body = ctx.body as
+    | {
+        userId?: string
+        role?: string | string[]
+        data?: { role?: string | string[]; banned?: boolean }
+      }
+    | undefined
   const userId = body?.userId
   if (!userId) return
 
@@ -33,6 +39,16 @@ export async function assertNotLastAdmin(
   if (ctx.path === '/admin/set-role') {
     const roles = Array.isArray(body.role) ? body.role : [body.role]
     if (roles.includes('admin')) return
+  }
+
+  if (ctx.path === '/admin/update-user') {
+    const roles = Array.isArray(body.data?.role)
+      ? body.data.role
+      : [body.data?.role]
+    const keepsAdmin =
+      body.data?.role === undefined || roles.includes('admin')
+    const keepsActive = body.data?.banned !== true
+    if (keepsAdmin && keepsActive) return
   }
 
   if ((await countActiveAdmins()) === 1) {

@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 export async function POST(request: Request): Promise<Response> {
   try {
     const session = await requireAdminRequest(request)
-    await sendMailTest(session.user.email)
+    await sendMailTest(session.user.email, session.user.id)
     return Response.json({ ok: true })
   } catch (error) {
     if (error instanceof SettingsMutationError) {
