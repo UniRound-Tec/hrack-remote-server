@@ -57,6 +57,14 @@ export const ko = {
       switchHint: '이미 계정이 있다면?',
       switch: '로그인'
     },
+    verify: {
+      pageTitle: '이메일 확인 · HRack',
+      title: '이메일 인증 코드 입력',
+      lead: '코드는 10분 동안 유효합니다. 여러 메일이 오면 가장 최근 코드를 사용하세요.',
+      submit: '인증하고 계속',
+      switchHint: '다른 계정이 필요한가요?',
+      switch: '로그인으로 돌아가기'
+    },
     points: [
       '세션은 데스크톱에서 계속 돌아갑니다. 네이티브 TUI 는 자리를 떠나지 않습니다.',
       '승인, 질문, 오류 — 램프가 켜지면 휴대폰이 받을 수 있습니다.',
@@ -70,7 +78,12 @@ export const ko = {
     showPassword: '비밀번호 표시',
     hidePassword: '비밀번호 숨기기',
     submitting: '연결 중…',
-    unavailable: '계정 서비스는 아직 연결되지 않았습니다. 폼은 준비되어 있고, 출시 후 여기서 콘솔로 들어갑니다.',
+    verifyLabel: 'email verification',
+    otp: '인증 코드',
+    otpPlaceholder: '000000',
+    latestOtp: '가장 최근 메일 사용',
+    resend: '코드 다시 보내기',
+    resendIn: (seconds: number) => `${seconds}초 후 다시 보내기`,
     back: '홈으로 돌아가기',
     errors: {
       emailRequired: '이메일을 입력하세요.',
@@ -78,7 +91,20 @@ export const ko = {
       passwordRequired: '비밀번호를 입력하세요.',
       passwordShort: '비밀번호는 8자 이상이어야 합니다.',
       confirmRequired: '비밀번호를 한 번 더 입력하세요.',
-      confirmMismatch: '두 비밀번호가 일치하지 않습니다.'
+      confirmMismatch: '두 비밀번호가 일치하지 않습니다.',
+      otpRequired: '6자리 인증 코드를 입력하세요.',
+      otpFormat: '인증 코드는 숫자 6자리여야 합니다.',
+      invalidCredentials: '이메일 또는 비밀번호가 올바르지 않습니다.',
+      emailNotVerified: '메일로 받은 6자리 코드로 이메일을 확인하세요.',
+      mailUnavailable: '메일 서비스를 일시적으로 사용할 수 없습니다.',
+      otpInvalid: '인증 코드가 올바르지 않습니다.',
+      otpExpired: '인증 코드가 만료되었습니다. 다시 요청하세요.',
+      tooManyAttempts: '시도 횟수가 너무 많습니다. 새 코드를 요청하세요.',
+      rateLimited: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.',
+      banned: '이 계정은 비활성화되었습니다.',
+      oauthFailed: '외부 서비스 로그인이 실패했습니다.',
+      emailNotFound: '외부 서비스에서 이메일을 받지 못했습니다. 이메일 로그인을 사용하세요.',
+      generic: '계정 서비스를 일시적으로 사용할 수 없습니다.'
     }
   },
   status: {

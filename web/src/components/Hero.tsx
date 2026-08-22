@@ -124,7 +124,7 @@ export function Hero() {
             </a>
           </ClickSpark>
           <a
-            href="/auth"
+            href="/auth?tab=register"
             className="hrack-press flex items-center gap-2 rounded-full border border-border-default bg-content px-5 py-3 text-[14px] font-medium text-text-secondary hover:border-border-strong hover:text-text-primary"
           >
             <Smartphone className="size-4" strokeWidth={1.75} />

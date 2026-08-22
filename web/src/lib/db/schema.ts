@@ -1,4 +1,14 @@
-import { integer, sqliteTable, text, blob } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import {
+  blob,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex
+} from 'drizzle-orm/sqlite-core'
+import { user } from './auth-schema'
+
+export * from './auth-schema'
 
 /** Encrypted platform settings (SMTP/OAuth). Secrets live in ciphertext only. */
 export const platformSettings = sqliteTable('platform_settings', {
@@ -29,3 +39,27 @@ export const otpSendGuard = sqliteTable('otp_send_guard', {
   lastAttemptAt: integer('last_attempt_at').notNull(),
   lastOkAt: integer('last_ok_at')
 })
+
+/** One active remote pairing per authenticated user. CRUD lands in pairing P3. */
+export const pairings = sqliteTable(
+  'pairings',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    roomId: text('room_id').notNull(),
+    joinUrl: text('join_url').notNull(),
+    revokeTokenEnc: text('revoke_token_enc').notNull(),
+    status: text('status', { enum: ['active', 'revoked', 'stale'] })
+      .notNull()
+      .default('active'),
+    createdAt: integer('created_at').notNull(),
+    revokedAt: integer('revoked_at')
+  },
+  (table) => [
+    uniqueIndex('one_active_per_user')
+      .on(table.userId)
+      .where(sql`${table.status} = 'active'`)
+  ]
+)

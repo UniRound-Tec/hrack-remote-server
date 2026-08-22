@@ -58,6 +58,14 @@ export const en = {
       switchHint: 'Already have an account?',
       switch: 'Sign in'
     },
+    verify: {
+      pageTitle: 'Verify email · HRack',
+      title: 'Enter your email code',
+      lead: 'The code is valid for 10 minutes. If several messages arrive, use the newest one.',
+      submit: 'Verify and continue',
+      switchHint: 'Need a different account?',
+      switch: 'Back to sign in'
+    },
     points: [
       'The session keeps running on the desk. The native TUI does not leave the box.',
       'Approvals, questions, errors \u2014 when a lamp lights, the phone can take it.',
@@ -71,7 +79,12 @@ export const en = {
     showPassword: 'Show password',
     hidePassword: 'Hide password',
     submitting: 'Connecting\u2026',
-    unavailable: 'Account service is not wired yet. The form is ready \u2014 this is where the console will open.',
+    verifyLabel: 'email verification',
+    otp: 'Verification code',
+    otpPlaceholder: '000000',
+    latestOtp: 'Use the newest email',
+    resend: 'Resend code',
+    resendIn: (seconds: number) => `Resend in ${seconds}s`,
     back: 'Back to home',
     errors: {
       emailRequired: 'Enter an email.',
@@ -79,7 +92,20 @@ export const en = {
       passwordRequired: 'Enter a password.',
       passwordShort: 'Password must be at least 8 characters.',
       confirmRequired: 'Enter the password again.',
-      confirmMismatch: 'The two passwords do not match.'
+      confirmMismatch: 'The two passwords do not match.',
+      otpRequired: 'Enter the 6-digit code.',
+      otpFormat: 'The code must contain 6 digits.',
+      invalidCredentials: 'The email or password is incorrect.',
+      emailNotVerified: 'Confirm your email with the 6-digit code we sent.',
+      mailUnavailable: 'Email delivery is temporarily unavailable. Try again later.',
+      otpInvalid: 'That code is not valid. Check it and try again.',
+      otpExpired: 'That code has expired. Request a new one.',
+      tooManyAttempts: 'Too many attempts. Request a new code.',
+      rateLimited: 'Too many requests. Try again shortly.',
+      banned: 'This account has been disabled.',
+      oauthFailed: 'Third-party sign-in failed. Try again.',
+      emailNotFound: 'That provider did not return an email. Use email sign-in instead.',
+      generic: 'The account service is temporarily unavailable. Try again later.'
     }
   },
   status: {

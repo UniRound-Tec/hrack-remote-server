@@ -57,6 +57,14 @@ export const zhTW = {
       switchHint: '已經有帳號？',
       switch: '登入'
     },
+    verify: {
+      pageTitle: '驗證電子郵件 · HRack',
+      title: '輸入電子郵件驗證碼',
+      lead: '驗證碼 10 分鐘內有效。若收到多封郵件，請使用最新一封。',
+      submit: '驗證並繼續',
+      switchHint: '需要換個帳號？',
+      switch: '返回登入'
+    },
     points: [
       '會話繼續跑在桌面，原生 TUI 一個位元組都不走。',
       '確認、提問、出錯——燈亮的時候，手機接得住。',
@@ -70,7 +78,12 @@ export const zhTW = {
     showPassword: '顯示密碼',
     hidePassword: '隱藏密碼',
     submitting: '連線中…',
-    unavailable: '帳號服務還沒接上。表單已經就位，上線後從這裡進控制台。',
+    verifyLabel: 'email verification',
+    otp: '驗證碼',
+    otpPlaceholder: '000000',
+    latestOtp: '以最新一封為準',
+    resend: '重發驗證碼',
+    resendIn: (seconds: number) => `${seconds} 秒後可重發`,
     back: '返回首頁',
     errors: {
       emailRequired: '填寫電子郵件。',
@@ -78,7 +91,20 @@ export const zhTW = {
       passwordRequired: '填寫密碼。',
       passwordShort: '密碼至少 8 位。',
       confirmRequired: '再輸入一次密碼。',
-      confirmMismatch: '兩次密碼不一致。'
+      confirmMismatch: '兩次密碼不一致。',
+      otpRequired: '請填寫 6 位驗證碼。',
+      otpFormat: '驗證碼必須是 6 位數字。',
+      invalidCredentials: '電子郵件或密碼不正確。',
+      emailNotVerified: '請先用郵件中的 6 位驗證碼確認電子郵件。',
+      mailUnavailable: '郵件服務暫時無法使用，請稍後再試。',
+      otpInvalid: '驗證碼不正確，請檢查後重試。',
+      otpExpired: '驗證碼已過期，請重新傳送。',
+      tooManyAttempts: '嘗試次數過多，請重新傳送驗證碼。',
+      rateLimited: '操作太頻繁，請稍後再試。',
+      banned: '此帳號已被停用。',
+      oauthFailed: '第三方登入失敗，請重試。',
+      emailNotFound: '第三方帳號沒有可用電子郵件，請改用電子郵件登入。',
+      generic: '帳號服務暫時無法使用，請稍後再試。'
     }
   },
   status: {

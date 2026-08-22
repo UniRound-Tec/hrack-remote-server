@@ -60,6 +60,14 @@ export const zhCN = {
       switchHint: '已经有账号？',
       switch: '登录'
     },
+    verify: {
+      pageTitle: '验证邮箱 · HRack',
+      title: '输入邮箱验证码',
+      lead: '验证码 10 分钟内有效。若收到多封邮件，请使用最新一封。',
+      submit: '验证并继续',
+      switchHint: '需要换个账号？',
+      switch: '返回登录'
+    },
     points: [
       '会话继续跑在桌面，原生 TUI 一个字节都不走。',
       '确认、提问、出错——灯亮的时候，手机接得住。',
@@ -73,7 +81,12 @@ export const zhCN = {
     showPassword: '显示密码',
     hidePassword: '隐藏密码',
     submitting: '连接中…',
-    unavailable: '账号服务还没接上。表单已经就位，上线后从这里进控制台。',
+    verifyLabel: 'email verification',
+    otp: '验证码',
+    otpPlaceholder: '000000',
+    latestOtp: '以最新一封为准',
+    resend: '重发验证码',
+    resendIn: (seconds: number) => `${seconds} 秒后可重发`,
     back: '返回首页',
     errors: {
       emailRequired: '填写邮箱。',
@@ -81,7 +94,20 @@ export const zhCN = {
       passwordRequired: '填写密码。',
       passwordShort: '密码至少 8 位。',
       confirmRequired: '再输入一次密码。',
-      confirmMismatch: '两次密码不一致。'
+      confirmMismatch: '两次密码不一致。',
+      otpRequired: '填写 6 位验证码。',
+      otpFormat: '验证码必须是 6 位数字。',
+      invalidCredentials: '邮箱或密码不正确。',
+      emailNotVerified: '请先用邮件中的 6 位验证码确认邮箱。',
+      mailUnavailable: '邮件服务暂不可用，请稍后再试。',
+      otpInvalid: '验证码不正确，请检查后重试。',
+      otpExpired: '验证码已过期，请重新发送。',
+      tooManyAttempts: '尝试次数过多，请重新发送验证码。',
+      rateLimited: '操作太频繁，请稍后再试。',
+      banned: '此账号已被禁用。',
+      oauthFailed: '第三方登录失败，请重试。',
+      emailNotFound: '第三方账号没有可用邮箱，请改用邮箱登录。',
+      generic: '账号服务暂不可用，请稍后再试。'
     }
   },
   status: {

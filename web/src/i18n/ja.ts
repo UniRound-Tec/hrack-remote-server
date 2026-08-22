@@ -57,6 +57,14 @@ export const ja = {
       switchHint: 'すでにアカウントがある？',
       switch: 'サインイン'
     },
+    verify: {
+      pageTitle: 'メールを確認 · HRack',
+      title: 'メールの確認コードを入力',
+      lead: 'コードは 10 分間有効です。複数届いた場合は、最新のメールを使用してください。',
+      submit: '確認して続ける',
+      switchHint: '別のアカウントを使う？',
+      switch: 'サインインへ戻る'
+    },
     points: [
       'セッションはデスクで動き続ける。ネイティブ TUI は箱から出ない。',
       '承認、質問、エラー — ランプが灯ったら、スマホが受け取れる。',
@@ -70,7 +78,12 @@ export const ja = {
     showPassword: 'パスワードを表示',
     hidePassword: 'パスワードを隠す',
     submitting: '接続中…',
-    unavailable: 'アカウントサービスはまだつながっていません。フォームは用意済み。公開後、ここからコンソールに入ります。',
+    verifyLabel: 'email verification',
+    otp: '確認コード',
+    otpPlaceholder: '000000',
+    latestOtp: '最新のメールを使用',
+    resend: 'コードを再送',
+    resendIn: (seconds: number) => `${seconds} 秒後に再送`,
     back: 'ホームへ戻る',
     errors: {
       emailRequired: 'メールを入力してください。',
@@ -78,7 +91,20 @@ export const ja = {
       passwordRequired: 'パスワードを入力してください。',
       passwordShort: 'パスワードは 8 文字以上です。',
       confirmRequired: 'パスワードをもう一度入力してください。',
-      confirmMismatch: 'パスワードが一致しません。'
+      confirmMismatch: 'パスワードが一致しません。',
+      otpRequired: '6 桁の確認コードを入力してください。',
+      otpFormat: '確認コードは 6 桁の数字です。',
+      invalidCredentials: 'メールまたはパスワードが正しくありません。',
+      emailNotVerified: 'メールで届いた 6 桁のコードで確認してください。',
+      mailUnavailable: 'メールサービスを一時的に利用できません。',
+      otpInvalid: '確認コードが正しくありません。',
+      otpExpired: '確認コードの期限が切れました。再送してください。',
+      tooManyAttempts: '試行回数が多すぎます。コードを再送してください。',
+      rateLimited: '操作が多すぎます。少し待ってから再試行してください。',
+      banned: 'このアカウントは無効化されています。',
+      oauthFailed: '外部サービスでのサインインに失敗しました。',
+      emailNotFound: '外部サービスからメールを取得できません。メールでサインインしてください。',
+      generic: 'アカウントサービスを一時的に利用できません。'
     }
   },
   status: {

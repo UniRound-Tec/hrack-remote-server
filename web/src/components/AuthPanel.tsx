@@ -1,13 +1,20 @@
 'use client'
 
 import { useLang } from '@/i18n/lang-context'
-import {
-  statusColor,
-  type SessionStatus
-} from '@/lib/session-status'
+import { authClient } from '@/lib/auth-client'
+import { allowNext } from '@/lib/auth-navigation'
+import { statusColor, type SessionStatus } from '@/lib/session-status'
 import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type FormEvent,
+  type ReactNode
+} from 'react'
 import { Brand } from './Brand'
 import { Footer } from './Footer'
 import { Nav } from './Nav'
@@ -15,29 +22,93 @@ import { Eyebrow } from './Reveal'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const OTP_RE = /^\d{6}$/
 const POINT_LAMPS: SessionStatus[] = ['working', 'needs-you', 'done']
+const LAST_EMAIL_KEY = 'hrack-auth-email'
 
-type AuthMode = 'login' | 'register'
+export type AuthMode = 'login' | 'register' | 'verify'
+export type AuthPageError = 'email_not_verified' | 'email_not_found' | 'oauth'
+
 type FieldErrors = {
   email?: 'emailRequired' | 'emailInvalid'
   password?: 'passwordRequired' | 'passwordShort'
   confirm?: 'confirmRequired' | 'confirmMismatch'
+  otp?: 'otpRequired' | 'otpFormat'
 }
 
-export function AuthPanel() {
+type Feedback =
+  | 'invalidCredentials'
+  | 'emailNotVerified'
+  | 'mailUnavailable'
+  | 'otpInvalid'
+  | 'otpExpired'
+  | 'tooManyAttempts'
+  | 'rateLimited'
+  | 'banned'
+  | 'oauthFailed'
+  | 'emailNotFound'
+  | 'generic'
+
+type AuthMethods = {
+  github: boolean
+  google: boolean
+  emailVerificationRequired: boolean
+}
+
+type ClientError = {
+  status?: number
+  code?: string
+  message?: string
+  body?: { code?: string; message?: string }
+}
+
+function errorCode(error: ClientError): string {
+  return (error.code ?? error.body?.code ?? '').toUpperCase()
+}
+
+function errorFeedback(error: ClientError, otp = false): Feedback {
+  const code = errorCode(error)
+  if (error.status === 429) return 'rateLimited'
+  if (code.includes('MAIL_UNAVAILABLE')) return 'mailUnavailable'
+  if (code.includes('TOO_MANY_ATTEMPTS')) return 'tooManyAttempts'
+  if (code.includes('EXPIRED')) return 'otpExpired'
+  if (code.includes('BANNED') || code.includes('BAN')) return 'banned'
+  if (otp || code.includes('OTP')) return 'otpInvalid'
+  return 'invalidCredentials'
+}
+
+export function AuthPanel({
+  initialMode = 'login',
+  nextPath,
+  initialError
+}: {
+  initialMode?: Exclude<AuthMode, 'verify'>
+  nextPath?: string
+  initialError?: AuthPageError
+}) {
   const { strings } = useLang()
   const reduce = useReducedMotion()
-  const [mode, setMode] = useState<AuthMode>('login')
+  const [mode, setMode] = useState<AuthMode>(
+    initialError === 'email_not_verified' ? 'verify' : initialMode
+  )
   const copy = strings.auth[mode]
   const formId = useId()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [otp, setOtp] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
-  const [unavailable, setUnavailable] = useState(false)
+  const [methods, setMethods] = useState<AuthMethods | null>(null)
+  const [cooldown, setCooldown] = useState(0)
+  const [feedback, setFeedback] = useState<Feedback | null>(() => {
+    if (initialError === 'email_not_found') return 'emailNotFound'
+    if (initialError === 'oauth') return 'oauthFailed'
+    if (initialError === 'email_not_verified') return 'emailNotVerified'
+    return null
+  })
 
   const pointsRef = useRef<HTMLUListElement>(null)
   const pointsInView = useInView(pointsRef, { once: true, margin: '-40px' })
@@ -48,12 +119,29 @@ export function AuthPanel() {
   }, [copy.pageTitle])
 
   useEffect(() => {
-    setErrors({})
-    setUnavailable(false)
-    setSubmitting(false)
-    setConfirm('')
-    setShowPassword(false)
-  }, [mode])
+    void fetch('/api/public/auth-methods', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('auth methods unavailable')
+        return (await response.json()) as AuthMethods
+      })
+      .then(setMethods)
+      .catch(() => setFeedback('generic'))
+  }, [])
+
+  useEffect(() => {
+    if (mode !== 'verify' || email) return
+    const saved = window.localStorage.getItem(LAST_EMAIL_KEY)
+    if (saved) setEmail(saved)
+  }, [email, mode])
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = window.setInterval(
+      () => setCooldown((value) => Math.max(0, value - 1)),
+      1000
+    )
+    return () => window.clearInterval(timer)
+  }, [cooldown])
 
   const fadeUp = (delay: number) => ({
     initial: reduce ? false : { opacity: 0, y: 12 },
@@ -61,11 +149,28 @@ export function AuthPanel() {
     transition: { duration: 0.55, delay, ease: EASE }
   })
 
+  function selectMode(next: Exclude<AuthMode, 'verify'>): void {
+    setMode(next)
+    setErrors({})
+    setFeedback(null)
+    setSubmitting(false)
+    setConfirm('')
+    setOtp('')
+    setShowPassword(false)
+  }
+
   function validate(): FieldErrors {
     const next: FieldErrors = {}
     const trimmed = email.trim()
     if (!trimmed) next.email = 'emailRequired'
     else if (!EMAIL_RE.test(trimmed)) next.email = 'emailInvalid'
+
+    if (mode === 'verify') {
+      if (!otp) next.otp = 'otpRequired'
+      else if (!OTP_RE.test(otp)) next.otp = 'otpFormat'
+      return next
+    }
+
     if (!password) next.password = 'passwordRequired'
     else if (password.length < 8) next.password = 'passwordShort'
     if (mode === 'register') {
@@ -75,16 +180,130 @@ export function AuthPanel() {
     return next
   }
 
+  async function ensureMethods(): Promise<AuthMethods | null> {
+    if (methods) return methods
+    try {
+      const response = await fetch('/api/public/auth-methods', {
+        cache: 'no-store'
+      })
+      if (!response.ok) throw new Error('auth methods unavailable')
+      const loaded = (await response.json()) as AuthMethods
+      setMethods(loaded)
+      return loaded
+    } catch {
+      setFeedback('generic')
+      return null
+    }
+  }
+
+  function finish(): void {
+    window.location.assign(allowNext(nextPath) ?? '/dashboard')
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     const next = validate()
     setErrors(next)
     if (Object.keys(next).length > 0) return
+
     setSubmitting(true)
-    setUnavailable(false)
-    await new Promise((resolve) => setTimeout(resolve, 720))
-    setSubmitting(false)
-    setUnavailable(true)
+    setFeedback(null)
+    const normalized = email.trim().toLowerCase()
+    window.localStorage.setItem(LAST_EMAIL_KEY, normalized)
+
+    try {
+      if (mode === 'verify') {
+        const result = await authClient.emailOtp.verifyEmail({
+          email: normalized,
+          otp
+        })
+        if (result.error) {
+          setFeedback(errorFeedback(result.error as ClientError, true))
+          return
+        }
+        window.localStorage.removeItem(LAST_EMAIL_KEY)
+        finish()
+        return
+      }
+
+      const authMethods = await ensureMethods()
+      if (!authMethods) return
+
+      if (mode === 'register') {
+        const result = await authClient.signUp.email({
+          email: normalized,
+          password,
+          name: normalized.split('@')[0] || 'HRack user',
+          callbackURL: allowNext(nextPath) ?? '/dashboard'
+        })
+        if (result.error) {
+          setFeedback(errorFeedback(result.error as ClientError))
+          return
+        }
+        if (authMethods.emailVerificationRequired) {
+          setMode('verify')
+          setFeedback('emailNotVerified')
+          setCooldown(60)
+          return
+        }
+        window.localStorage.removeItem(LAST_EMAIL_KEY)
+        finish()
+        return
+      }
+
+      const result = await authClient.signIn.email({
+        email: normalized,
+        password,
+        callbackURL: allowNext(nextPath) ?? '/dashboard'
+      })
+      if (result.error) {
+        const clientError = result.error as ClientError
+        const code = errorCode(clientError)
+        if (
+          clientError.status === 403 ||
+          code.includes('EMAIL_NOT_VERIFIED')
+        ) {
+          setMode('verify')
+          setFeedback('emailNotVerified')
+          setCooldown(60)
+          return
+        }
+        setFeedback(errorFeedback(clientError))
+        return
+      }
+      window.localStorage.removeItem(LAST_EMAIL_KEY)
+      finish()
+    } catch {
+      setFeedback('generic')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function resend(): Promise<void> {
+    if (cooldown > 0 || !EMAIL_RE.test(email.trim())) return
+    setFeedback(null)
+    setCooldown(60)
+    try {
+      const result = await authClient.emailOtp.sendVerificationOtp({
+        email: email.trim().toLowerCase(),
+        type: 'email-verification'
+      })
+      if (result.error) {
+        const mapped = errorFeedback(result.error as ClientError, true)
+        if (mapped === 'mailUnavailable') setFeedback(mapped)
+      }
+    } catch {
+      // The resend response is intentionally non-enumerating; keep cooldown.
+    }
+  }
+
+  function onOtpPaste(event: ClipboardEvent<HTMLInputElement>): void {
+    const digits = event.clipboardData.getData('text').match(/\d{6}/)?.[0]
+    if (!digits) return
+    event.preventDefault()
+    setOtp(digits)
+    setErrors((previous) => ({ ...previous, otp: undefined }))
   }
 
   return (
@@ -168,45 +387,47 @@ export function AuthPanel() {
               {...fadeUp(0.12)}
               className="order-1 flex flex-col bg-app/60 p-7 sm:p-9 lg:order-2"
             >
-              <div
-                className="grid grid-cols-2 rounded-lg border border-border-default bg-surface-strong p-0.5"
-                role="tablist"
-                aria-label={`${strings.nav.login} / ${strings.nav.register}`}
-              >
-                <ModeTab
-                  active={mode === 'login'}
-                  label={strings.nav.login}
-                  onSelect={() => setMode('login')}
-                />
-                <ModeTab
-                  active={mode === 'register'}
-                  label={strings.nav.register}
-                  onSelect={() => setMode('register')}
-                />
-              </div>
+              {mode === 'verify' ? (
+                <p className="rounded-lg border border-border-default bg-surface-strong px-3 py-2 text-center font-maple text-[10px] tracking-[0.18em] text-text-faint uppercase">
+                  {strings.auth.verifyLabel}
+                </p>
+              ) : (
+                <div
+                  className="grid grid-cols-2 rounded-lg border border-border-default bg-surface-strong p-0.5"
+                  role="tablist"
+                  aria-label={`${strings.nav.login} / ${strings.nav.register}`}
+                >
+                  <ModeTab
+                    active={mode === 'login'}
+                    label={strings.nav.login}
+                    onSelect={() => selectMode('login')}
+                  />
+                  <ModeTab
+                    active={mode === 'register'}
+                    label={strings.nav.register}
+                    onSelect={() => selectMode('register')}
+                  />
+                </div>
+              )}
 
-              <form
-                className="mt-7 flex flex-col gap-4"
-                onSubmit={onSubmit}
-                noValidate
-              >
+              <form className="mt-7 flex flex-col gap-4" onSubmit={onSubmit} noValidate>
                 <AnimatePresence>
-                  {unavailable && (
+                  {feedback && (
                     <motion.div
-                      key="unavailable"
+                      key={feedback}
                       initial={reduce ? false : { opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
                       transition={{ duration: 0.35, ease: EASE }}
                       className="flex gap-2.5 rounded-lg border border-border-default bg-content px-3 py-2.5"
-                      role="status"
+                      role="alert"
                     >
                       <span
                         aria-hidden
                         className="mt-1 size-2.5 shrink-0 rounded-full bg-status-needs-you-dot shadow-[0_0_10px_color-mix(in_srgb,var(--hrack-status-needsYou)_55%,transparent)]"
                       />
                       <p className="text-[13px] leading-relaxed text-text-secondary">
-                        {strings.auth.unavailable}
+                        {strings.auth.errors[feedback]}
                       </p>
                     </motion.div>
                   )}
@@ -216,78 +437,83 @@ export function AuthPanel() {
                   id={`${formId}-email`}
                   name="email"
                   label={strings.auth.email}
-                  error={
-                    errors.email ? strings.auth.errors[errors.email] : undefined
-                  }
+                  error={errors.email ? strings.auth.errors[errors.email] : undefined}
                 >
                   <input
                     id={`${formId}-email`}
                     name="email"
                     type="email"
                     autoComplete="email"
-                    autoFocus
+                    autoFocus={mode !== 'verify'}
                     inputMode="email"
+                    readOnly={mode === 'verify'}
                     aria-label={strings.auth.email}
                     value={email}
                     onChange={(event) => {
                       setEmail(event.target.value)
-                      if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }))
+                      if (errors.email) {
+                        setErrors((previous) => ({ ...previous, email: undefined }))
+                      }
                     }}
                     placeholder={strings.auth.emailPlaceholder}
                     aria-invalid={Boolean(errors.email)}
                     aria-describedby={errors.email ? `${formId}-email-error` : undefined}
-                    className="hrack-field h-11 w-full rounded-lg border border-border-default bg-content px-3 text-[14px] text-text-primary placeholder:text-text-faint"
+                    className="hrack-field h-11 w-full rounded-lg border border-border-default bg-content px-3 text-[14px] text-text-primary placeholder:text-text-faint read-only:bg-surface-strong read-only:text-text-muted"
                   />
                 </Field>
 
-                <Field
-                  id={`${formId}-password`}
-                  name="password"
-                  label={strings.auth.password}
-                  hint={mode === 'register' ? strings.auth.passwordHint : undefined}
-                  error={
-                    errors.password
-                      ? strings.auth.errors[errors.password]
-                      : undefined
-                  }
-                >
-                  <div className="relative">
-                    <input
-                      id={`${formId}-password`}
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                      aria-label={strings.auth.password}
-                      value={password}
-                      onChange={(event) => {
-                        setPassword(event.target.value)
-                        if (errors.password)
-                          setErrors((prev) => ({ ...prev, password: undefined }))
-                      }}
-                      aria-invalid={Boolean(errors.password)}
-                      aria-describedby={
-                        errors.password ? `${formId}-password-error` : undefined
-                      }
-                      className="hrack-field h-11 w-full rounded-lg border border-border-default bg-content py-0 pr-11 pl-3 text-[14px] text-text-primary"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((value) => !value)}
-                      aria-label={
-                        showPassword
-                          ? strings.auth.hidePassword
-                          : strings.auth.showPassword
-                      }
-                      className="hrack-press-chip absolute top-1/2 right-1.5 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-text-faint hover:bg-surface-strong hover:text-text-secondary"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="size-4" strokeWidth={1.75} />
-                      ) : (
-                        <Eye className="size-4" strokeWidth={1.75} />
-                      )}
-                    </button>
-                  </div>
-                </Field>
+                {mode !== 'verify' && (
+                  <Field
+                    id={`${formId}-password`}
+                    name="password"
+                    label={strings.auth.password}
+                    hint={mode === 'register' ? strings.auth.passwordHint : undefined}
+                    error={
+                      errors.password ? strings.auth.errors[errors.password] : undefined
+                    }
+                  >
+                    <div className="relative">
+                      <input
+                        id={`${formId}-password`}
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                        aria-label={strings.auth.password}
+                        value={password}
+                        onChange={(event) => {
+                          setPassword(event.target.value)
+                          if (errors.password) {
+                            setErrors((previous) => ({
+                              ...previous,
+                              password: undefined
+                            }))
+                          }
+                        }}
+                        aria-invalid={Boolean(errors.password)}
+                        aria-describedby={
+                          errors.password ? `${formId}-password-error` : undefined
+                        }
+                        className="hrack-field h-11 w-full rounded-lg border border-border-default bg-content py-0 pr-11 pl-3 text-[14px] text-text-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((value) => !value)}
+                        aria-label={
+                          showPassword
+                            ? strings.auth.hidePassword
+                            : strings.auth.showPassword
+                        }
+                        className="hrack-press-chip absolute top-1/2 right-1.5 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-text-faint hover:bg-surface-strong hover:text-text-secondary"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="size-4" strokeWidth={1.75} />
+                        ) : (
+                          <Eye className="size-4" strokeWidth={1.75} />
+                        )}
+                      </button>
+                    </div>
+                  </Field>
+                )}
 
                 {mode === 'register' && (
                   <Field
@@ -295,9 +521,7 @@ export function AuthPanel() {
                     name="confirm"
                     label={strings.auth.confirm}
                     error={
-                      errors.confirm
-                        ? strings.auth.errors[errors.confirm]
-                        : undefined
+                      errors.confirm ? strings.auth.errors[errors.confirm] : undefined
                     }
                   >
                     <input
@@ -309,14 +533,52 @@ export function AuthPanel() {
                       value={confirm}
                       onChange={(event) => {
                         setConfirm(event.target.value)
-                        if (errors.confirm)
-                          setErrors((prev) => ({ ...prev, confirm: undefined }))
+                        if (errors.confirm) {
+                          setErrors((previous) => ({
+                            ...previous,
+                            confirm: undefined
+                          }))
+                        }
                       }}
                       aria-invalid={Boolean(errors.confirm)}
                       aria-describedby={
                         errors.confirm ? `${formId}-confirm-error` : undefined
                       }
                       className="hrack-field h-11 w-full rounded-lg border border-border-default bg-content px-3 text-[14px] text-text-primary"
+                    />
+                  </Field>
+                )}
+
+                {mode === 'verify' && (
+                  <Field
+                    id={`${formId}-otp`}
+                    name="otp"
+                    label={strings.auth.otp}
+                    hint={strings.auth.latestOtp}
+                    error={errors.otp ? strings.auth.errors[errors.otp] : undefined}
+                  >
+                    <input
+                      id={`${formId}-otp`}
+                      name="otp"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      autoFocus
+                      aria-label={strings.auth.otp}
+                      value={otp}
+                      onPaste={onOtpPaste}
+                      onChange={(event) => {
+                        setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))
+                        if (errors.otp) {
+                          setErrors((previous) => ({ ...previous, otp: undefined }))
+                        }
+                      }}
+                      placeholder={strings.auth.otpPlaceholder}
+                      aria-invalid={Boolean(errors.otp)}
+                      aria-describedby={errors.otp ? `${formId}-otp-error` : undefined}
+                      className="hrack-field h-12 w-full rounded-lg border border-border-default bg-content px-3 text-center font-maple text-[22px] tracking-[0.35em] text-text-primary placeholder:text-text-faint"
                     />
                   </Field>
                 )}
@@ -328,6 +590,19 @@ export function AuthPanel() {
                 >
                   {submitting ? strings.auth.submitting : copy.submit}
                 </button>
+
+                {mode === 'verify' && (
+                  <button
+                    type="button"
+                    disabled={cooldown > 0}
+                    onClick={() => void resend()}
+                    className="text-[12px] font-medium text-text-secondary underline-offset-4 hover:text-text-primary hover:underline disabled:text-text-faint disabled:no-underline"
+                  >
+                    {cooldown > 0
+                      ? strings.auth.resendIn(cooldown)
+                      : strings.auth.resend}
+                  </button>
+                )}
               </form>
 
               <p className="mt-5 text-center text-[13px] text-text-muted">
@@ -335,7 +610,7 @@ export function AuthPanel() {
                 <button
                   type="button"
                   onClick={() =>
-                    setMode(mode === 'login' ? 'register' : 'login')
+                    selectMode(mode === 'login' ? 'register' : 'login')
                   }
                   className="font-medium text-text-secondary underline-offset-4 transition-colors duration-200 hover:text-text-primary hover:underline"
                 >
