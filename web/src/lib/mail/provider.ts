@@ -3,6 +3,13 @@ import { getDb } from '../db'
 import { otpSendGuard } from '../db/schema'
 import { emptyToUndef } from '../settings/resolve'
 import { sendConsoleOtp } from './console'
+import { createResendProvider } from './resend'
+import {
+  createSmtpProvider,
+  type SmtpConfig,
+  type SmtpSecurity
+} from './smtp'
+import type { MailProvider } from './types'
 
 const RESEND_COOLDOWN_MS = 60_000
 const RESEND_WINDOW_MS = 60 * 60_000
@@ -15,16 +22,92 @@ export class MailUnavailableError extends Error {
   }
 }
 
-function consoleIsReady(): boolean {
-  const provider = emptyToUndef(process.env.MAIL_PROVIDER)?.toLowerCase()
-  if (provider === 'console') return true
-  if (provider !== undefined) return false
-  return process.env.NODE_ENV !== 'production'
+const consoleProvider: MailProvider = {
+  kind: 'console',
+  send: sendConsoleOtp
 }
 
-/** PR2 provides console delivery. PR3 adds SMTP and Resend resolution. */
+const RESEND_SANDBOX_FROM = 'HRack <onboarding@resend.dev>'
+
+function parsePort(value: string | undefined): number | undefined {
+  if (!value || !/^\d+$/.test(value)) return undefined
+  const port = Number(value)
+  return port >= 1 && port <= 65_535 ? port : undefined
+}
+
+function parseSecurity(value: string | undefined): SmtpSecurity | undefined {
+  return value === 'tls' || value === 'starttls' || value === 'none'
+    ? value
+    : undefined
+}
+
+function resolveSmtpConfig(stored?: SmtpConfig | null): SmtpConfig | undefined {
+  const host = emptyToUndef(process.env.SMTP_HOST) ?? stored?.host
+  const envPort = emptyToUndef(process.env.SMTP_PORT)
+  const port = envPort === undefined ? stored?.port : parsePort(envPort)
+  const envSecurity = emptyToUndef(process.env.SMTP_SECURITY)?.toLowerCase()
+  const security =
+    envSecurity === undefined
+      ? stored?.security
+      : parseSecurity(envSecurity)
+  const username = emptyToUndef(process.env.SMTP_USER) ?? stored?.username
+  const password = emptyToUndef(process.env.SMTP_PASS) ?? stored?.password
+  const from = emptyToUndef(process.env.SMTP_FROM) ?? stored?.from
+
+  if (!host || !port || !security || !from) return undefined
+  if (security === 'none' && process.env.NODE_ENV === 'production') {
+    return undefined
+  }
+  if (Boolean(username) !== Boolean(password)) return undefined
+  return { host, port, security, username, password, from }
+}
+
+function resendProvider(): MailProvider | undefined {
+  const apiKey = emptyToUndef(process.env.RESEND_API_KEY)
+  if (!apiKey) return undefined
+  return createResendProvider({
+    apiKey,
+    from: emptyToUndef(process.env.SMTP_FROM) ?? RESEND_SANDBOX_FROM
+  })
+}
+
+/**
+ * Resolve the runtime mail transport. A non-empty MAIL_PROVIDER pins the kind
+ * and never falls through to stored SMTP settings.
+ */
+export async function resolveMailProvider(
+  storedSmtp?: SmtpConfig | null
+): Promise<MailProvider> {
+  const pinned = emptyToUndef(process.env.MAIL_PROVIDER)?.toLowerCase()
+  if (pinned === 'console') return consoleProvider
+  if (pinned === 'resend') {
+    const provider = resendProvider()
+    if (provider) return provider
+    throw new MailUnavailableError()
+  }
+  if (pinned === 'smtp') {
+    const config = resolveSmtpConfig()
+    if (config) return createSmtpProvider(config)
+    throw new MailUnavailableError()
+  }
+  if (pinned !== undefined) throw new MailUnavailableError()
+
+  const smtp = resolveSmtpConfig(storedSmtp)
+  if (smtp) return createSmtpProvider(smtp)
+  const resend = resendProvider()
+  if (resend) return resend
+  if (process.env.NODE_ENV !== 'production') return consoleProvider
+  throw new MailUnavailableError()
+}
+
 export async function isMailReady(): Promise<boolean> {
-  return consoleIsReady()
+  try {
+    await resolveMailProvider()
+    return true
+  } catch (error) {
+    if (error instanceof MailUnavailableError) return false
+    throw error
+  }
 }
 
 function reserveSend(email: string, now: number): boolean {
@@ -68,13 +151,13 @@ export async function sendVerificationOTP({
   otp: string
   type: 'email-verification'
 }): Promise<void> {
-  if (!(await isMailReady())) throw new MailUnavailableError()
+  const provider = await resolveMailProvider()
 
   const normalized = email.trim().toLowerCase()
   const now = Date.now()
   if (!reserveSend(normalized, now)) return
 
-  await sendConsoleOtp({ email: normalized, otp, at: now })
+  await provider.send({ email: normalized, otp, at: now })
   getDb()
     .update(otpSendGuard)
     .set({ lastOkAt: Date.now() })

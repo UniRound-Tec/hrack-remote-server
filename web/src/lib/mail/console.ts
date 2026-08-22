@@ -1,17 +1,12 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-
-export type ConsoleOtp = {
-  email: string
-  otp: string
-  at: number
-}
+import type { VerificationOtp } from './types'
 
 function dataDir(): string {
   return process.env.HRACK_WEB_DATA ?? path.join(process.cwd(), 'data')
 }
 
-export async function sendConsoleOtp(message: ConsoleOtp): Promise<void> {
+export async function sendConsoleOtp(message: VerificationOtp): Promise<void> {
   if (process.env.NODE_ENV === 'production') {
     console.info('[mail.console] verification OTP suppressed in production')
     return

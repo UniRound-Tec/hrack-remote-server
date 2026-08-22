@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { closeDb } from './db'
+import { closeDb, getDb } from './db'
+import { user } from './db/auth-schema'
 import { createAuth } from './auth-options'
 
 const BASE_URL = 'http://localhost:3000'
@@ -47,6 +48,13 @@ beforeEach(() => {
   vi.stubEnv('BETTER_AUTH_URL', BASE_URL)
   vi.stubEnv('BETTER_AUTH_SECRET', 'pr2-test-secret-that-is-at-least-32-bytes')
   vi.stubEnv('MAIL_PROVIDER', '')
+  vi.stubEnv('RESEND_API_KEY', '')
+  vi.stubEnv('SMTP_HOST', '')
+  vi.stubEnv('SMTP_PORT', '')
+  vi.stubEnv('SMTP_USER', '')
+  vi.stubEnv('SMTP_PASS', '')
+  vi.stubEnv('SMTP_FROM', '')
+  vi.stubEnv('SMTP_SECURITY', '')
   vi.stubEnv('ADMIN_BOOTSTRAP_EMAIL', '')
 })
 
@@ -58,7 +66,18 @@ afterEach(() => {
   }
 })
 
-describe('Better Auth PR2 contract', () => {
+describe('Better Auth contract', () => {
+  it('rejects verified registration before insert when production mail is unavailable', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    const auth = testAuth(true)
+    const registration = await signUp(auth, 'blocked@example.test')
+    expect(registration.status).toBe(400)
+    await expect(registration.json()).resolves.toMatchObject({
+      code: 'MAIL_UNAVAILABLE'
+    })
+    expect(getDb().select().from(user).all()).toHaveLength(0)
+  })
+
   it('registers and signs in without SMTP when verification is disabled', async () => {
     vi.stubEnv('NODE_ENV', 'production')
     const auth = testAuth(false)

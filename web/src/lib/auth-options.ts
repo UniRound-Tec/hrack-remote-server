@@ -168,8 +168,8 @@ export function createAuth(
               message: 'Not found'
             })
           }
-          void sendVerificationOTP({ email, otp, type }).catch((error) => {
-            console.error('[mail.send_fail]', error)
+          void sendVerificationOTP({ email, otp, type }).catch(() => {
+            console.error('[mail.send_fail]')
           })
         }
       }),
