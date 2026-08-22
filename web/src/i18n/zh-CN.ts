@@ -110,6 +110,57 @@ export const zhCN = {
       generic: '账号服务暂不可用，请稍后再试。'
     }
   },
+  admin: {
+    eyebrow: 'operator',
+    navigation: '运营后台导航',
+    dashboard: '用户控制台',
+    signOut: '退出登录',
+    nav: {
+      overview: '总览',
+      users: '用户',
+      mail: '邮件',
+      oauth: 'OAuth'
+    },
+    overview: {
+      title: '运营控制台',
+      lead: '管理平台身份、邮件投递与第三方登录。敏感配置只在服务端处理，不会回传到浏览器。'
+    },
+    sections: {
+      users: {
+        title: '用户管理',
+        description: '查看账号、角色、验证状态与禁用状态。'
+      },
+      mail: {
+        title: '邮件与验证',
+        description: '配置 SMTP，并决定新账号是否必须验证邮箱。'
+      },
+      oauth: {
+        title: 'OAuth 提供商',
+        description: '管理 GitHub 与 Google 登录客户端。'
+      }
+    },
+    comingSoon: '此配置面板将在后续切片接入。',
+    setup: {
+      title: '创建首位运营者',
+      lead: '此入口只在平台尚无管理员时开放。Setup token 仅随本次 POST 提交，不会写入 URL。',
+      token: 'Setup token',
+      email: '管理员邮箱',
+      password: '密码',
+      confirm: '确认密码',
+      submit: '创建并进入后台',
+      submitting: '正在创建…',
+      back: '返回首页',
+      errors: {
+        invalidToken: 'Setup token 不正确。',
+        accountExists: '该邮箱已有账号，请换一个邮箱或使用 CLI。',
+        invalidEmail: '填写有效的管理员邮箱。',
+        invalidPassword: '密码长度必须为 8–128 位。',
+        passwordMismatch: '两次密码不一致。',
+        unavailable: '初始化入口已关闭。',
+        generic: '暂时无法创建管理员，请稍后重试。'
+      }
+    }
+  },
   status: {
     working: '运行中',
     needsYou: '需要你',

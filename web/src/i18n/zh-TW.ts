@@ -107,6 +107,57 @@ export const zhTW = {
       generic: '帳號服務暫時無法使用，請稍後再試。'
     }
   },
+  admin: {
+    eyebrow: 'operator',
+    navigation: '營運後台導覽',
+    dashboard: '使用者控制台',
+    signOut: '登出',
+    nav: {
+      overview: '總覽',
+      users: '使用者',
+      mail: '郵件',
+      oauth: 'OAuth'
+    },
+    overview: {
+      title: '營運控制台',
+      lead: '管理平台身分、郵件投遞與第三方登入。敏感設定只在伺服器端處理，不會回傳到瀏覽器。'
+    },
+    sections: {
+      users: {
+        title: '使用者管理',
+        description: '檢視帳號、角色、驗證狀態與停權狀態。'
+      },
+      mail: {
+        title: '郵件與驗證',
+        description: '設定 SMTP，並決定新帳號是否必須驗證電子郵件。'
+      },
+      oauth: {
+        title: 'OAuth 提供商',
+        description: '管理 GitHub 與 Google 登入用戶端。'
+      }
+    },
+    comingSoon: '此設定面板將在後續切片接入。',
+    setup: {
+      title: '建立首位營運者',
+      lead: '此入口只在平台尚無管理員時開放。Setup token 只隨本次 POST 傳送，不會寫入網址。',
+      token: 'Setup token',
+      email: '管理員電子郵件',
+      password: '密碼',
+      confirm: '確認密碼',
+      submit: '建立並進入後台',
+      submitting: '正在建立…',
+      back: '返回首頁',
+      errors: {
+        invalidToken: 'Setup token 不正確。',
+        accountExists: '此電子郵件已有帳號，請改用其他信箱或 CLI。',
+        invalidEmail: '請輸入有效的管理員電子郵件。',
+        invalidPassword: '密碼長度必須為 8–128 個字元。',
+        passwordMismatch: '兩次輸入的密碼不一致。',
+        unavailable: '初始化入口已關閉。',
+        generic: '暫時無法建立管理員，請稍後再試。'
+      }
+    }
+  },
   status: {
     working: '執行中',
     needsYou: '需要你',

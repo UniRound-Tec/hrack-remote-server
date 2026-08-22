@@ -107,6 +107,57 @@ export const ko = {
       generic: '계정 서비스를 일시적으로 사용할 수 없습니다.'
     }
   },
+  admin: {
+    eyebrow: 'operator',
+    navigation: '운영 콘솔 탐색',
+    dashboard: '사용자 대시보드',
+    signOut: '로그아웃',
+    nav: {
+      overview: '개요',
+      users: '사용자',
+      mail: '메일',
+      oauth: 'OAuth'
+    },
+    overview: {
+      title: '운영 콘솔',
+      lead: '플랫폼 계정, 메일 전송, 외부 로그인을 관리합니다. 민감한 설정은 서버에서만 처리되며 브라우저에 반환되지 않습니다.'
+    },
+    sections: {
+      users: {
+        title: '사용자 관리',
+        description: '계정, 역할, 인증 상태, 차단 상태를 확인합니다.'
+      },
+      mail: {
+        title: '메일 및 인증',
+        description: 'SMTP와 신규 계정의 이메일 인증 필요 여부를 설정합니다.'
+      },
+      oauth: {
+        title: 'OAuth 제공자',
+        description: 'GitHub 및 Google 로그인 클라이언트를 관리합니다.'
+      }
+    },
+    comingSoon: '이 설정 패널은 후속 작업에서 연결됩니다.',
+    setup: {
+      title: '첫 운영자 만들기',
+      lead: '관리자가 아직 없을 때만 열립니다. Setup token은 이 POST로만 전송되며 URL에 기록되지 않습니다.',
+      token: 'Setup token',
+      email: '관리자 이메일',
+      password: '비밀번호',
+      confirm: '비밀번호 확인',
+      submit: '만들고 콘솔로 이동',
+      submitting: '만드는 중…',
+      back: '홈으로 돌아가기',
+      errors: {
+        invalidToken: 'Setup token이 올바르지 않습니다.',
+        accountExists: '이 이메일에 이미 계정이 있습니다. 다른 이메일이나 CLI를 사용하세요.',
+        invalidEmail: '올바른 관리자 이메일을 입력하세요.',
+        invalidPassword: '비밀번호는 8~128자여야 합니다.',
+        passwordMismatch: '비밀번호가 일치하지 않습니다.',
+        unavailable: '초기 설정 진입점이 닫혔습니다.',
+        generic: '관리자를 만들 수 없습니다. 잠시 후 다시 시도하세요.'
+      }
+    }
+  },
   status: {
     working: '실행 중',
     needsYou: '확인 필요',

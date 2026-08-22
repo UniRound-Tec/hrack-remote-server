@@ -49,7 +49,20 @@ docker compose --profile edge up -d --build
 不想要 compose 自带 nginx 时，去掉 `--profile edge`，用宿主反代按
 `deploy/nginx.hrack.conf.example` 分流 `/` 与 `/remote/`。
 
+### 创建首位管理员
+
+无邮件服务时有两条逃生路径：在 `.env` 配置至少 24 字节的随机
+`ADMIN_SETUP_TOKEN` 后访问 `/admin/setup`（成功后删除该变量），或运行仓库钉死版本的 CLI：
+
+```sh
+docker compose --profile tools run --rm web-tools create-admin \
+  --email ops@example.com --name Ops --role admin
+```
+
+CLI 会提示输入密码。`web-tools` 以 `1000:1000` 运行并共享 Web 的 SQLite 卷；不要改用 root 或 `npx @latest`。也不要依赖 CLI 默认发现配置：Compose 包装器会把固定的 `--config better-auth.config.ts` 放到 pinned `auth@1.7.1` 所要求的子命令后。`ADMIN_BOOTSTRAP_EMAIL` 只会在正常 OTP/OAuth 注册成功后提权，不是无邮件逃生路径。
+
 安全基线：中继维持单副本、read-only、内存态房间；`/api/auth/*` 与
-`/dashboard` 不落访问日志；SQLite 单文件在 `web-data` 卷，备份即拷贝。
+`/api/admin/*`、`/dashboard` 与 `/admin` 不落访问日志；SQLite 单文件在
+`web-data` 卷，备份即拷贝。
 
 详见 `docs/PAIRING-PLATFORM-SPEC.md`（平台规格）与 `docs/DEPLOYMENT.md`（中继加固）。

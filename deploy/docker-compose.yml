@@ -55,6 +55,9 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_SECURITY: ${SMTP_SECURITY:-}
       EMAIL_VERIFICATION_REQUIRED: ${EMAIL_VERIFICATION_REQUIRED:-}
+      # 首位管理员：setup token 是无邮件逃生；bootstrap email 只做正常注册后的自动提权
+      ADMIN_SETUP_TOKEN: ${ADMIN_SETUP_TOKEN:-}
+      ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
     restart: unless-stopped
     depends_on:
       relay:
@@ -67,6 +70,31 @@ services:
     # 不上 edge profile 时，取消注释从宿主直连调试：
     # ports:
     #   - "30001:3000"
+
+  # 无邮件时的 CLI 逃生通道。包装器把固定 --config 插到动态子命令之后。
+  web-tools:
+    profiles:
+      - tools
+    build:
+      context: ../web
+      target: build
+    working_dir: /app
+    user: "1000:1000"
+    volumes:
+      - web-data:/app/data
+    environment:
+      HRACK_WEB_DATA: /app/data
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set in .env}
+      BETTER_AUTH_URL: ${PUBLIC_ORIGIN:?set in .env}
+      PAIRING_ENC_KEY: ${PAIRING_ENC_KEY:?set in .env}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        subcommand="$${1:?pass an auth CLI subcommand}"
+        shift
+        exec node_modules/.bin/auth "$$subcommand" --config better-auth.config.ts "$$@"
+      - auth-entrypoint
 
   nginx:
     image: nginx:1.27-bookworm

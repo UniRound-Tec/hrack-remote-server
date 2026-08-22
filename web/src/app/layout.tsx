@@ -3,7 +3,7 @@ import { cookies, headers } from 'next/headers'
 import { zhCN } from '@/i18n/zh-CN'
 import { LangProvider } from '@/i18n/lang-context'
 import { isLocale, parseAcceptLanguage, resolveLocale } from '@/i18n/locale'
-import { TerminalBackdrop } from '@/components/TerminalBackdrop'
+import { RouteBackdrop } from '@/components/RouteBackdrop'
 import '@fontsource/noto-sans-sc/400.css'
 import '@fontsource/noto-sans-sc/500.css'
 import '@fontsource/noto-sans-sc/700.css'
@@ -37,7 +37,7 @@ export default async function RootLayout({
           aria-hidden
           className="ambient-tint pointer-events-none fixed inset-0 z-0"
         />
-        <TerminalBackdrop />
+        <RouteBackdrop />
         <div className="relative z-10">
           <LangProvider initialLang={initialLang}>{children}</LangProvider>
         </div>

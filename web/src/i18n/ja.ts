@@ -107,6 +107,57 @@ export const ja = {
       generic: 'アカウントサービスを一時的に利用できません。'
     }
   },
+  admin: {
+    eyebrow: 'operator',
+    navigation: '運用コンソールのナビゲーション',
+    dashboard: 'ユーザーダッシュボード',
+    signOut: 'ログアウト',
+    nav: {
+      overview: '概要',
+      users: 'ユーザー',
+      mail: 'メール',
+      oauth: 'OAuth'
+    },
+    overview: {
+      title: '運用コンソール',
+      lead: 'ユーザー、メール配信、外部ログインを管理します。機密設定はサーバー内だけで処理され、ブラウザーには返されません。'
+    },
+    sections: {
+      users: {
+        title: 'ユーザー管理',
+        description: 'アカウント、ロール、認証状態、停止状態を確認します。'
+      },
+      mail: {
+        title: 'メールと認証',
+        description: 'SMTP と、新規アカウントのメール認証要件を設定します。'
+      },
+      oauth: {
+        title: 'OAuth プロバイダー',
+        description: 'GitHub と Google のログインクライアントを管理します。'
+      }
+    },
+    comingSoon: 'この設定パネルは後続のスライスで接続されます。',
+    setup: {
+      title: '最初の運用者を作成',
+      lead: '管理者がまだ存在しない場合にのみ利用できます。Setup token はこの POST だけで送信され、URL には書き込まれません。',
+      token: 'Setup token',
+      email: '管理者メールアドレス',
+      password: 'パスワード',
+      confirm: 'パスワードを確認',
+      submit: '作成してコンソールへ',
+      submitting: '作成中…',
+      back: 'ホームへ戻る',
+      errors: {
+        invalidToken: 'Setup token が正しくありません。',
+        accountExists: 'このメールには既にアカウントがあります。別のメールか CLI を使用してください。',
+        invalidEmail: '有効な管理者メールアドレスを入力してください。',
+        invalidPassword: 'パスワードは 8〜128 文字で入力してください。',
+        passwordMismatch: 'パスワードが一致しません。',
+        unavailable: '初期設定エントリは閉じています。',
+        generic: '管理者を作成できませんでした。しばらくしてから再試行してください。'
+      }
+    }
+  },
   status: {
     working: '実行中',
     needsYou: '要確認',

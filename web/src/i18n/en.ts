@@ -108,6 +108,57 @@ export const en = {
       generic: 'The account service is temporarily unavailable. Try again later.'
     }
   },
+  admin: {
+    eyebrow: 'operator',
+    navigation: 'Operator navigation',
+    dashboard: 'User dashboard',
+    signOut: 'Sign out',
+    nav: {
+      overview: 'Overview',
+      users: 'Users',
+      mail: 'Mail',
+      oauth: 'OAuth'
+    },
+    overview: {
+      title: 'Operator console',
+      lead: 'Manage platform identities, email delivery, and third-party sign-in. Sensitive configuration stays on the server and is never returned to the browser.'
+    },
+    sections: {
+      users: {
+        title: 'User management',
+        description: 'Inspect accounts, roles, verification, and ban status.'
+      },
+      mail: {
+        title: 'Mail and verification',
+        description: 'Configure SMTP and decide whether new accounts must verify email.'
+      },
+      oauth: {
+        title: 'OAuth providers',
+        description: 'Manage GitHub and Google sign-in clients.'
+      }
+    },
+    comingSoon: 'This configuration panel is connected in a later slice.',
+    setup: {
+      title: 'Create the first operator',
+      lead: 'This entry point is open only while the platform has no administrator. The setup token is sent only in this POST and is never written to the URL.',
+      token: 'Setup token',
+      email: 'Administrator email',
+      password: 'Password',
+      confirm: 'Confirm password',
+      submit: 'Create and enter the console',
+      submitting: 'Creating…',
+      back: 'Back to home',
+      errors: {
+        invalidToken: 'The setup token is incorrect.',
+        accountExists: 'That email already has an account. Use another email or the CLI.',
+        invalidEmail: 'Enter a valid administrator email.',
+        invalidPassword: 'Password must contain 8–128 characters.',
+        passwordMismatch: 'The two passwords do not match.',
+        unavailable: 'The setup entry point is closed.',
+        generic: 'The administrator could not be created. Try again later.'
+      }
+    }
+  },
   status: {
     working: 'working',
     needsYou: 'needs you',
