@@ -11,6 +11,7 @@ export const ko = {
     about: '소개',
     download: '다운로드',
     login: '로그인',
+    register: '회원가입',
     language: '언어 전환',
     skipToContent: '본문으로 건너뛰기'
   },
@@ -26,6 +27,7 @@ export const ko = {
     promptWorking: (n: number) => `진행 중 ${n}건`,
     promptQuiet: '모두 순조롭게',
     download: 'HRack 다운로드',
+    downloadFor: (os: string) => `${os}용 다운로드`,
     github: 'GitHub',
     remote: '원격 제어 URL 생성',
     platforms: 'Windows · macOS · Linux',
@@ -33,10 +35,51 @@ export const ko = {
     rackHint: '드래그 가능 · 데스크톱 플로팅 모니터와 같은 패널',
     rackLabel: 'HRack 플로팅 모니터'
   },
-  login: {
-    title: 'HRack 로그인',
-    body: '계정 체계는 준비 중입니다. 출시 후 이곳이 원격 제어 URL 콘솔이 됩니다: URL 하나로 휴대폰이 HRack 의 리모컨이 됩니다.',
-    back: '홈으로 돌아가기'
+  auth: {
+    eyebrow: 'remote',
+    consoleLabel: 'console',
+    sessionsLabel: 'sessions',
+    consoleIdle: 'idle',
+    pointKeys: ['desktop', 'phone', 'url'],
+    login: {
+      pageTitle: '로그인 · HRack',
+      title: '원격 콘솔에 연결',
+      lead: '로그인하면 여기에 원격 URL 이 발급됩니다. 휴대폰이 리모컨이 되고, 데스크톱 세션은 그 자리에 남습니다.',
+      submit: '로그인',
+      switchHint: '아직 계정이 없다면?',
+      switch: '회원가입'
+    },
+    register: {
+      pageTitle: '회원가입 · HRack',
+      title: '원격 계정 만들기',
+      lead: '먼저 계정. 데스크톱 터미널은 옮기지 않고, 확인과 질문은 휴대폰으로 넘깁니다.',
+      submit: '계정 만들기',
+      switchHint: '이미 계정이 있다면?',
+      switch: '로그인'
+    },
+    points: [
+      '세션은 데스크톱에서 계속 돌아갑니다. 네이티브 TUI 는 자리를 떠나지 않습니다.',
+      '승인, 질문, 오류 — 램프가 켜지면 휴대폰이 받을 수 있습니다.',
+      'URL 하나가 전부입니다. 두 번째 터미널은 필요 없습니다.'
+    ],
+    email: '이메일',
+    emailPlaceholder: 'you@studio.dev',
+    password: '비밀번호',
+    confirm: '비밀번호 확인',
+    passwordHint: '8자 이상',
+    showPassword: '비밀번호 표시',
+    hidePassword: '비밀번호 숨기기',
+    submitting: '연결 중…',
+    unavailable: '계정 서비스는 아직 연결되지 않았습니다. 폼은 준비되어 있고, 출시 후 여기서 콘솔로 들어갑니다.',
+    back: '홈으로 돌아가기',
+    errors: {
+      emailRequired: '이메일을 입력하세요.',
+      emailInvalid: '이메일 형식이 올바르지 않습니다.',
+      passwordRequired: '비밀번호를 입력하세요.',
+      passwordShort: '비밀번호는 8자 이상이어야 합니다.',
+      confirmRequired: '비밀번호를 한 번 더 입력하세요.',
+      confirmMismatch: '두 비밀번호가 일치하지 않습니다.'
+    }
   },
   status: {
     working: '실행 중',

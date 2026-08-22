@@ -14,6 +14,7 @@ export const zhCN = {
     about: '关于',
     download: '下载',
     login: '登录',
+    register: '注册',
     language: '切换语言',
     skipToContent: '跳到主要内容'
   },
@@ -29,6 +30,7 @@ export const zhCN = {
     promptWorking: (n: number) => `${n} 个进行中`,
     promptQuiet: '一切正常推进',
     download: '下载 HRack',
+    downloadFor: (os: string) => `下载 ${os} 版`,
     github: 'GitHub',
     remote: '生成远程控制 URL',
     platforms: 'Windows · macOS · Linux',
@@ -36,10 +38,51 @@ export const zhCN = {
     rackHint: '可拖动 · 与桌面悬浮监控同一面板',
     rackLabel: 'HRack 悬浮监控'
   },
-  login: {
-    title: '登录 HRack',
-    body: '账号体系正在路上。上线后，这里会成为你的远程控制 URL 控制台：一条 URL，把手机变成 HRack 的遥控器。',
-    back: '返回首页'
+  auth: {
+    eyebrow: 'remote',
+    consoleLabel: 'console',
+    sessionsLabel: 'sessions',
+    consoleIdle: 'idle',
+    pointKeys: ['desktop', 'phone', 'url'],
+    login: {
+      pageTitle: '登录 · HRack',
+      title: '接上远程控制台',
+      lead: '登录之后，这里会发出一条远程 URL：手机变成遥控器，桌面会话留在原处。',
+      submit: '登录',
+      switchHint: '还没有账号？',
+      switch: '注册'
+    },
+    register: {
+      pageTitle: '注册 · HRack',
+      title: '创建远程账号',
+      lead: '先有账号，才有遥控器。桌面终端不搬家，确认和提问从手机接走。',
+      submit: '创建账号',
+      switchHint: '已经有账号？',
+      switch: '登录'
+    },
+    points: [
+      '会话继续跑在桌面，原生 TUI 一个字节都不走。',
+      '确认、提问、出错——灯亮的时候，手机接得住。',
+      '一条 URL 接上就行，不用再开第二套终端。'
+    ],
+    email: '邮箱',
+    emailPlaceholder: 'you@studio.dev',
+    password: '密码',
+    confirm: '确认密码',
+    passwordHint: '至少 8 位',
+    showPassword: '显示密码',
+    hidePassword: '隐藏密码',
+    submitting: '连接中…',
+    unavailable: '账号服务还没接上。表单已经就位，上线后从这里进控制台。',
+    back: '返回首页',
+    errors: {
+      emailRequired: '填写邮箱。',
+      emailInvalid: '邮箱格式不对。',
+      passwordRequired: '填写密码。',
+      passwordShort: '密码至少 8 位。',
+      confirmRequired: '再输入一次密码。',
+      confirmMismatch: '两次密码不一致。'
+    }
   },
   status: {
     working: '运行中',

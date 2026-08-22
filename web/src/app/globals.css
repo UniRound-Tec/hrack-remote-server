@@ -187,6 +187,91 @@ body {
   border-radius: 4px;
 }
 
+/* ------------------------------------------------------------------ */
+/* 控件按压：短行程、同一条缓动。光扫只给实心主按钮。                    */
+/* ------------------------------------------------------------------ */
+
+.hrack-press {
+  transition:
+    color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hrack-press:hover {
+  transform: translateY(-1px);
+}
+
+.hrack-press:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.hrack-press-primary {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 24px -12px rgb(0 0 0 / 45%);
+}
+
+.hrack-press-primary:hover {
+  box-shadow: 0 14px 28px -12px rgb(0 0 0 / 52%);
+}
+
+.hrack-press-primary::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgb(255 255 255 / 16%) 50%,
+    transparent 62%
+  );
+  transform: translateX(-130%);
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hrack-press-primary:hover::after {
+  transform: translateX(130%);
+}
+
+.hrack-press-chip:hover {
+  transform: none;
+}
+
+.hrack-press-chip:active {
+  transform: scale(0.96);
+}
+
+/* 表单井：浅底、hover 描边、focus 用品牌环而不是全局 outline */
+.hrack-field {
+  transition:
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hrack-field:hover {
+  border-color: var(--hrack-border-strong);
+}
+
+.hrack-field:focus-visible {
+  outline: none;
+  border-color: var(--hrack-border-strong);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--hrack-focus-ring) 38%, transparent);
+}
+
+.hrack-field[aria-invalid='true'] {
+  border-color: color-mix(
+    in srgb,
+    var(--hrack-status-error) 55%,
+    var(--hrack-border-default)
+  );
+}
+
 /* 滚动条（主仓 sidebar-scroll 同款） */
 .scroll-fine {
   scrollbar-color: var(--hrack-scrollbar-thumb, rgb(0 0 0 / 12%)) transparent;
@@ -364,6 +449,18 @@ body {
 
   .flow-wire-dot {
     display: none;
+  }
+
+  .hrack-press,
+  .hrack-press-primary::after,
+  .hrack-field {
+    transition: none !important;
+  }
+
+  .hrack-press:hover,
+  .hrack-press:active,
+  .hrack-press-chip:active {
+    transform: none !important;
   }
 
   .attention-persistent {

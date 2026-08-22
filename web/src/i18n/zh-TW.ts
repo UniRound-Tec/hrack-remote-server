@@ -11,6 +11,7 @@ export const zhTW = {
     about: '關於',
     download: '下載',
     login: '登入',
+    register: '註冊',
     language: '切換語言',
     skipToContent: '跳到主要內容'
   },
@@ -26,6 +27,7 @@ export const zhTW = {
     promptWorking: (n: number) => `${n} 個進行中`,
     promptQuiet: '一切正常推進',
     download: '下載 HRack',
+    downloadFor: (os: string) => `下載 ${os} 版`,
     github: 'GitHub',
     remote: '產生遠端控制 URL',
     platforms: 'Windows · macOS · Linux',
@@ -33,10 +35,51 @@ export const zhTW = {
     rackHint: '可拖曳 · 與桌面懸浮監控同一面板',
     rackLabel: 'HRack 懸浮監控'
   },
-  login: {
-    title: '登入 HRack',
-    body: '帳號體系正在路上。上線後，這裡會成為你的遠端控制 URL 控制台：一條 URL，把手機變成 HRack 的遙控器。',
-    back: '返回首頁'
+  auth: {
+    eyebrow: 'remote',
+    consoleLabel: 'console',
+    sessionsLabel: 'sessions',
+    consoleIdle: 'idle',
+    pointKeys: ['desktop', 'phone', 'url'],
+    login: {
+      pageTitle: '登入 · HRack',
+      title: '接上遠端控制台',
+      lead: '登入之後，這裡會發出一條遠端 URL：手機變成遙控器，桌面會話留在原處。',
+      submit: '登入',
+      switchHint: '還沒有帳號？',
+      switch: '註冊'
+    },
+    register: {
+      pageTitle: '註冊 · HRack',
+      title: '建立遠端帳號',
+      lead: '先有帳號，才有遙控器。桌面終端機不搬家，確認和提問從手機接走。',
+      submit: '建立帳號',
+      switchHint: '已經有帳號？',
+      switch: '登入'
+    },
+    points: [
+      '會話繼續跑在桌面，原生 TUI 一個位元組都不走。',
+      '確認、提問、出錯——燈亮的時候，手機接得住。',
+      '一條 URL 接上就行，不用再開第二套終端機。'
+    ],
+    email: '電子郵件',
+    emailPlaceholder: 'you@studio.dev',
+    password: '密碼',
+    confirm: '確認密碼',
+    passwordHint: '至少 8 位',
+    showPassword: '顯示密碼',
+    hidePassword: '隱藏密碼',
+    submitting: '連線中…',
+    unavailable: '帳號服務還沒接上。表單已經就位，上線後從這裡進控制台。',
+    back: '返回首頁',
+    errors: {
+      emailRequired: '填寫電子郵件。',
+      emailInvalid: '電子郵件格式不對。',
+      passwordRequired: '填寫密碼。',
+      passwordShort: '密碼至少 8 位。',
+      confirmRequired: '再輸入一次密碼。',
+      confirmMismatch: '兩次密碼不一致。'
+    }
   },
   status: {
     working: '執行中',

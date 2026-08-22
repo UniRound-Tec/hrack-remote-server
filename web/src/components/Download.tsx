@@ -1,17 +1,18 @@
 'use client'
 
 import { useLang } from '@/i18n/lang-context'
+import { useDownloadTarget } from '@/lib/use-latest-release'
+import type { PlatformId } from '@/lib/platform'
 import { ArrowUpRight } from 'lucide-react'
 import { Eyebrow, Reveal } from './Reveal'
 
-const RELEASES_URL = 'https://github.com/UniRound-Tec/HRack/releases'
-
 export function Download() {
   const { strings } = useLang()
-  const platforms = [
-    strings.download.platforms.windows,
-    strings.download.platforms.macos,
-    strings.download.platforms.linux
+  const { urlFor } = useDownloadTarget()
+  const platforms: { id: PlatformId; name: string; hint: string }[] = [
+    { id: 'windows', ...strings.download.platforms.windows },
+    { id: 'macos', ...strings.download.platforms.macos },
+    { id: 'linux', ...strings.download.platforms.linux }
   ]
 
   return (
@@ -38,22 +39,22 @@ export function Download() {
             <ul className="flex w-full max-w-sm flex-col">
               {platforms.map((platform) => (
                 <li
-                  key={platform.name}
+                  key={platform.id}
                   className="border-t border-border-faint first:border-t-0"
                 >
                   <a
-                    href={RELEASES_URL}
+                    href={urlFor(platform.id)}
                     target="_blank"
                     rel="noreferrer"
-                    className="group flex items-baseline justify-between gap-4 py-3"
+                    className="group flex items-baseline justify-between gap-4 rounded-md py-3 transition-colors duration-200 hover:text-text-primary"
                   >
                     <span className="text-[15px] font-semibold tracking-tight text-text-primary">
                       {platform.name}
                     </span>
-                    <span className="flex items-center gap-1.5 font-maple text-[10px] tracking-wide text-text-faint">
+                    <span className="flex items-center gap-1.5 font-maple text-[10px] tracking-wide text-text-faint transition-colors duration-200 group-hover:text-text-secondary">
                       {platform.hint}
                       <ArrowUpRight
-                        className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-text-secondary"
+                        className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                         strokeWidth={1.75}
                       />
                     </span>

@@ -11,6 +11,7 @@ export const ja = {
     about: '概要',
     download: 'ダウンロード',
     login: 'サインイン',
+    register: '登録',
     language: '言語を切り替える',
     skipToContent: '本文へスキップ'
   },
@@ -26,6 +27,7 @@ export const ja = {
     promptWorking: (n: number) => `実行中 ${n} 件`,
     promptQuiet: 'すべて順調',
     download: 'HRack をダウンロード',
+    downloadFor: (os: string) => `${os} 向けにダウンロード`,
     github: 'GitHub',
     remote: 'リモート URL を生成',
     platforms: 'Windows · macOS · Linux',
@@ -33,10 +35,51 @@ export const ja = {
     rackHint: 'ドラッグできます · デスクトップのフローティングモニターと同じパネル',
     rackLabel: 'HRack フローティングモニター'
   },
-  login: {
-    title: 'HRack にサインイン',
-    body: 'アカウント体制は準備中です。公開後、ここがリモート URL コンソールへ：たった一本の URL で、スマホが HRack のリモコンになります。',
-    back: 'ホームへ戻る'
+  auth: {
+    eyebrow: 'remote',
+    consoleLabel: 'console',
+    sessionsLabel: 'sessions',
+    consoleIdle: 'idle',
+    pointKeys: ['desktop', 'phone', 'url'],
+    login: {
+      pageTitle: 'サインイン · HRack',
+      title: 'リモートコンソールにつなぐ',
+      lead: 'サインインすると、ここにリモート URL が発行されます。スマホがリモコンになり、デスクトップのセッションはそのまま。',
+      submit: 'サインイン',
+      switchHint: 'アカウントがない？',
+      switch: '登録'
+    },
+    register: {
+      pageTitle: '登録 · HRack',
+      title: 'リモート用アカウントを作る',
+      lead: '先にアカウント。デスクトップのターミナルは動かさず、確認と質問だけスマホへ渡します。',
+      submit: 'アカウントを作成',
+      switchHint: 'すでにアカウントがある？',
+      switch: 'サインイン'
+    },
+    points: [
+      'セッションはデスクで動き続ける。ネイティブ TUI は箱から出ない。',
+      '承認、質問、エラー — ランプが灯ったら、スマホが受け取れる。',
+      '握手は URL 一本。二台目のターミナルは不要。'
+    ],
+    email: 'メール',
+    emailPlaceholder: 'you@studio.dev',
+    password: 'パスワード',
+    confirm: 'パスワード（確認）',
+    passwordHint: '8 文字以上',
+    showPassword: 'パスワードを表示',
+    hidePassword: 'パスワードを隠す',
+    submitting: '接続中…',
+    unavailable: 'アカウントサービスはまだつながっていません。フォームは用意済み。公開後、ここからコンソールに入ります。',
+    back: 'ホームへ戻る',
+    errors: {
+      emailRequired: 'メールを入力してください。',
+      emailInvalid: 'メールの形式が正しくありません。',
+      passwordRequired: 'パスワードを入力してください。',
+      passwordShort: 'パスワードは 8 文字以上です。',
+      confirmRequired: 'パスワードをもう一度入力してください。',
+      confirmMismatch: 'パスワードが一致しません。'
+    }
   },
   status: {
     working: '実行中',

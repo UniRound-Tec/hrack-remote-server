@@ -2,8 +2,10 @@
 
 import { useLang } from '@/i18n/lang-context'
 import { ShieldCheck } from 'lucide-react'
+import { motion, useInView, useReducedMotion } from 'motion/react'
 import type { CSSProperties } from 'react'
-import { Eyebrow, Reveal } from './Reveal'
+import { useRef } from 'react'
+import { Eyebrow, Reveal, fadeUpItem } from './Reveal'
 
 function Node({
   label,
@@ -26,11 +28,13 @@ function Node({
 function Wire({
   label,
   tone = 'neutral',
-  duration = 2.8
+  duration = 2.8,
+  armed = true
 }: {
   label: string
   tone?: 'neutral' | 'signal'
   duration?: number
+  armed?: boolean
 }) {
   const line =
     tone === 'signal'
@@ -42,13 +46,19 @@ function Wire({
 
   return (
     <div className="relative flex min-h-11 min-w-0 items-center">
-      <div className={`relative h-px w-full ${line}`}>
+      <div
+        className={`relative h-px w-full origin-left transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          armed ? 'scale-x-100' : 'scale-x-0'
+        } ${line}`}
+      >
         <span
           className={`flow-wire-dot flow-wire-dot-x ${dot}`}
           style={
             {
               '--packet-duration': `${duration}s`,
-              '--packet-delay': '0s'
+              '--packet-delay': '0s',
+              animationPlayState: armed ? 'running' : 'paused',
+              opacity: armed ? 1 : 0
             } as CSSProperties
           }
         />
@@ -57,7 +67,9 @@ function Wire({
           style={
             {
               '--packet-duration': `${duration}s`,
-              '--packet-delay': `-${duration / 2}s`
+              '--packet-delay': `-${duration / 2}s`,
+              animationPlayState: armed ? 'running' : 'paused',
+              opacity: armed ? 1 : 0
             } as CSSProperties
           }
         />
@@ -73,16 +85,22 @@ function Wire({
   )
 }
 
-function Fork({ label }: { label: string }) {
+function Fork({ label, armed = true }: { label: string; armed?: boolean }) {
   return (
     <div className="relative flex h-9 items-stretch justify-center">
-      <div className="relative w-px bg-[color-mix(in_srgb,var(--hrack-status-working)_40%,transparent)]">
+      <div
+        className={`relative w-px origin-top bg-[color-mix(in_srgb,var(--hrack-status-working)_40%,transparent)] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          armed ? 'scale-y-100' : 'scale-y-0'
+        }`}
+      >
         <span
           className="flow-wire-dot flow-wire-dot-y bg-status-working-dot"
           style={
             {
               '--packet-duration': '2.2s',
-              '--packet-delay': '-0.4s'
+              '--packet-delay': '-0.4s',
+              animationPlayState: armed ? 'running' : 'paused',
+              opacity: armed ? 1 : 0
             } as CSSProperties
           }
         />
@@ -121,6 +139,9 @@ function VWire({
 export function Flow() {
   const { strings } = useLang()
   const n = strings.flow.nodes
+  const diagramRef = useRef<HTMLDivElement>(null)
+  const reduce = useReducedMotion()
+  const armed = useInView(diagramRef, { once: true, amount: 0.35 }) || Boolean(reduce)
 
   return (
     <section
@@ -138,25 +159,28 @@ export function Flow() {
       </Reveal>
 
       <Reveal delay={0.08}>
-        <div className="mt-10 overflow-hidden rounded-2xl border border-border-default bg-content">
+        <div
+          ref={diagramRef}
+          className="mt-10 overflow-hidden rounded-2xl border border-border-default bg-content"
+        >
           <div className="hidden px-6 py-6 md:block lg:px-8">
             <div className="grid grid-cols-[minmax(8.75rem,11rem)_minmax(3.5rem,1fr)_minmax(8.75rem,11rem)_minmax(3.5rem,1fr)_minmax(10.5rem,13.5rem)] grid-rows-[auto_auto_auto] items-center">
               <Node label={n.cli} origin />
               <div className="col-span-3 px-3">
-                <Wire label="pty · bytes" duration={3.2} />
+                <Wire label="pty · bytes" duration={3.2} armed={armed} />
               </div>
               <Node label={n.tui} />
 
-              <Fork label="hooks · sse · extension" />
+              <Fork label="hooks · sse · extension" armed={armed} />
               <div className="col-span-4" />
 
               <Node label={n.adapter} />
               <div className="px-3">
-                <Wire label="translate" tone="signal" duration={1.6} />
+                <Wire label="translate" tone="signal" duration={1.6} armed={armed} />
               </div>
               <Node label={n.status} />
               <div className="px-3">
-                <Wire label="sync" tone="signal" duration={1.5} />
+                <Wire label="sync" tone="signal" duration={1.5} armed={armed} />
               </div>
               <Node label={n.surfaces} />
             </div>
@@ -174,9 +198,22 @@ export function Flow() {
             <Node label={n.surfaces} />
           </div>
 
-          <ol className="grid grid-cols-1 gap-px border-t border-border-default bg-border-default md:grid-cols-3">
+          <motion.ol
+            className="grid grid-cols-1 gap-px border-t border-border-default bg-border-default md:grid-cols-3"
+            initial={reduce ? false : 'hidden'}
+            whileInView="show"
+            viewport={{ once: true, amount: 0.25 }}
+            variants={{
+              hidden: {},
+              show: { transition: { staggerChildren: 0.08 } }
+            }}
+          >
             {strings.flow.steps.map((step, index) => (
-              <li key={step.title} className="bg-content px-5 py-5">
+              <motion.li
+                key={step.title}
+                variants={fadeUpItem}
+                className="bg-content px-5 py-5"
+              >
                 <p className="font-maple text-[11px] text-text-faint tabular-nums">
                   {String(index + 1).padStart(2, '0')}
                 </p>
@@ -186,9 +223,9 @@ export function Flow() {
                 <p className="mt-1.5 text-[13px] leading-relaxed text-text-muted">
                   {step.desc}
                 </p>
-              </li>
+              </motion.li>
             ))}
-          </ol>
+          </motion.ol>
         </div>
       </Reveal>
 

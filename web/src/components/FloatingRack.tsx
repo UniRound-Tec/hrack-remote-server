@@ -126,7 +126,7 @@ export function FloatingRack() {
               setOpen(true)
               setExpanded(false)
             }}
-            className="flex w-full cursor-pointer items-center gap-2 rounded-full border border-border-default bg-content px-3.5 py-2 shadow-[0_16px_36px_-12px_var(--hrack-shadow-popover)] transition-colors hover:border-border-strong"
+            className="hrack-press flex w-full cursor-pointer items-center gap-2 rounded-full border border-border-default bg-content px-3.5 py-2 shadow-[0_16px_36px_-12px_var(--hrack-shadow-popover)] hover:border-border-strong"
           >
             <Brand className="text-[16px]" />
             <span className="font-maple text-[10px] tracking-wide text-text-faint">

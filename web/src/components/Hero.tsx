@@ -3,18 +3,39 @@
 import ClickSpark from '@/effects/ClickSpark'
 import TextType from '@/effects/TextType'
 import { useLang } from '@/i18n/lang-context'
-import { motion, useReducedMotion } from 'motion/react'
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useTransform
+} from 'motion/react'
 import Image from 'next/image'
+import { useRef } from 'react'
 import { Download, Smartphone } from 'lucide-react'
 import { Brand } from './Brand'
-
-const RELEASES_URL = 'https://github.com/UniRound-Tec/HRack/releases'
+import { useDownloadTarget } from '@/lib/use-latest-release'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
 export function Hero() {
   const { strings } = useLang()
   const reduce = useReducedMotion()
+  const { platform, href } = useDownloadTarget()
+  const downloadLabel = platform
+    ? strings.hero.downloadFor(platform.label)
+    : strings.hero.download
+
+  const shotRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({
+    target: shotRef,
+    offset: ['start end', 'end start']
+  })
+  const shotY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [28, -24])
+  const shotScale = useTransform(
+    scrollYProgress,
+    [0, 0.45, 1],
+    reduce ? [1, 1, 1] : [1.045, 1, 1.02]
+  )
 
   const fadeUp = (delay: number) => ({
     initial: reduce ? false : { opacity: 0, y: 12 },
@@ -93,18 +114,18 @@ export function Hero() {
             sparkCount={7}
           >
             <a
-              href={RELEASES_URL}
+              href={href}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 rounded-full bg-button-primary px-6 py-3 text-[14px] font-medium text-button-primary-fg shadow-[0_10px_24px_-12px_rgb(0_0_0/45%)] transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-button-primary-hover hover:shadow-[0_14px_28px_-12px_rgb(0_0_0/50%)] active:translate-y-0 active:scale-[0.98]"
+              className="hrack-press hrack-press-primary flex items-center gap-2 rounded-full bg-button-primary px-6 py-3 text-[14px] font-medium text-button-primary-fg hover:bg-button-primary-hover"
             >
               <Download className="size-4" strokeWidth={2} />
-              {strings.hero.download}
+              {downloadLabel}
             </a>
           </ClickSpark>
           <a
-            href="/login"
-            className="flex items-center gap-2 rounded-full border border-border-default bg-content px-5 py-3 text-[14px] font-medium text-text-secondary transition-[color,border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:text-text-primary active:translate-y-0 active:scale-[0.98]"
+            href="/auth"
+            className="hrack-press flex items-center gap-2 rounded-full border border-border-default bg-content px-5 py-3 text-[14px] font-medium text-text-secondary hover:border-border-strong hover:text-text-primary"
           >
             <Smartphone className="size-4" strokeWidth={1.75} />
             {strings.hero.remote}
@@ -124,20 +145,23 @@ export function Hero() {
       </div>
 
       <motion.div
-        initial={reduce ? false : { opacity: 0, y: 18 }}
+        ref={shotRef}
+        initial={reduce ? false : { opacity: 0, y: 22 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.12, ease: EASE }}
+        transition={{ duration: 0.8, delay: 0.2, ease: EASE }}
         className="relative mt-12 w-full min-w-0"
       >
         <div className="overflow-hidden rounded-2xl border border-border-default shadow-[0_28px_70px_-28px_var(--hrack-shadow-popover)]">
-          <Image
-            src="/demo-workspace-6.png"
-            alt="HRack"
-            width={2272}
-            height={892}
-            priority
-            className="h-auto w-full"
-          />
+          <motion.div style={{ y: shotY, scale: shotScale }} className="origin-center will-change-transform">
+            <Image
+              src="/demo-workspace-6.png"
+              alt="HRack"
+              width={2272}
+              height={892}
+              priority
+              className="h-auto w-full"
+            />
+          </motion.div>
         </div>
       </motion.div>
     </section>

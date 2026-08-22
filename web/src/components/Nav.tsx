@@ -5,6 +5,7 @@ import { locales, localeLabels, type Locale } from '@/i18n'
 import { Brand } from './Brand'
 import Github from '@lobehub/icons/es/Github/components/Mono'
 import { ChevronDown, Languages } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 const REPO_URL = 'https://github.com/UniRound-Tec/HRack'
@@ -14,6 +15,7 @@ const MENU_MARGIN = 8
 
 export function Nav() {
   const { strings, lang, setLang } = useLang()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(
     null
@@ -70,6 +72,8 @@ export function Nav() {
     { href: 'https://github.com/UniRound-Tec/HRack#readme', label: strings.nav.docs },
     { href: 'https://github.com/UniRound-Tec', label: strings.nav.about }
   ]
+  const homeHref = pathname === '/' ? '#top' : '/'
+  const onAuth = pathname === '/auth'
 
   return (
     <header className="sticky top-0 z-50">
@@ -80,7 +84,7 @@ export function Nav() {
       <nav className="mx-auto flex h-14 w-full max-w-6xl items-center px-5 sm:px-8">
         <div className="flex items-baseline">
           <a
-            href="#top"
+            href={homeHref}
             aria-label="HRack"
             className="flex shrink-0 items-baseline pr-4"
           >
@@ -94,7 +98,7 @@ export function Nav() {
                   href={link.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-block px-2.5 text-[13px] leading-none font-medium text-text-muted transition-colors hover:text-text-primary"
+                  className="inline-block px-2.5 text-[13px] leading-none font-medium text-text-muted transition-colors duration-200 hover:text-text-primary"
                 >
                   {link.label}
                 </a>
@@ -112,12 +116,12 @@ export function Nav() {
               aria-expanded={open}
               aria-label={strings.nav.language}
               onClick={() => setOpen((value) => !value)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] leading-none font-medium text-text-muted transition-colors hover:bg-surface-strong/70 hover:text-text-secondary"
+              className="hrack-press hrack-press-chip inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] leading-none font-medium text-text-muted hover:bg-surface-strong/70 hover:text-text-secondary"
             >
               <Languages className="size-3.5 shrink-0" strokeWidth={1.75} />
               <span className="hidden sm:inline">{localeLabels[lang]}</span>
               <ChevronDown
-                className={`size-3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                className={`size-3 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
                 strokeWidth={1.75}
               />
             </button>
@@ -155,14 +159,15 @@ export function Nav() {
             target="_blank"
             rel="noreferrer"
             aria-label="GitHub"
-            className="inline-flex size-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-strong/70 hover:text-text-secondary"
+            className="hrack-press hrack-press-chip inline-flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-strong/70 hover:text-text-secondary"
           >
             <Github className="size-4" strokeWidth={1.75} />
           </a>
 
           <a
-            href="/login"
-            className="inline-flex h-8 items-center rounded-full bg-button-primary px-3.5 text-[12px] leading-none font-medium text-button-primary-fg transition-colors hover:bg-button-primary-hover"
+            href="/auth"
+            aria-current={onAuth ? 'page' : undefined}
+            className="hrack-press hrack-press-primary inline-flex h-8 items-center rounded-full bg-button-primary px-3.5 text-[12px] leading-none font-medium text-button-primary-fg hover:bg-button-primary-hover"
           >
             {strings.nav.login}
           </a>

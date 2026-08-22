@@ -9,7 +9,8 @@ import {
   useState,
   type ReactNode
 } from 'react'
-import { detectLocale, isLocale } from './locale'
+import { usePathname } from 'next/navigation'
+import { isLocale } from './locale'
 import { getStrings, type LandingStrings, type Locale } from '.'
 
 const STORAGE_KEY = 'hrack-lang'
@@ -22,35 +23,45 @@ interface LangContextValue {
 
 const LangContext = createContext<LangContextValue | null>(null)
 
-export function LangProvider({ children }: { children: ReactNode }) {
-  // SSR 与首次客户端渲染用基准语言，挂载后立即解析实际语言。
-  // 根节点带 suppressHydrationWarning，避免文本补丁告警（next-themes 同款策略）。
-  const [lang, setLangState] = useState<Locale>('zh-CN')
+function persistLocale(locale: Locale): void {
+  window.localStorage.setItem(STORAGE_KEY, locale)
+  document.cookie = `${STORAGE_KEY}=${locale}; path=/; max-age=31536000; SameSite=Lax`
+  document.documentElement.lang = locale
+}
+
+export function LangProvider({
+  children,
+  initialLang
+}: {
+  children: ReactNode
+  initialLang: Locale
+}) {
+  const [lang, setLangState] = useState<Locale>(initialLang)
+  const pathname = usePathname()
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored && isLocale(stored)) {
+    if (stored && isLocale(stored) && stored !== initialLang) {
       setLangState(stored)
-      return
     }
-    setLangState(detectLocale())
-  }, [])
+  }, [initialLang])
+
+  useEffect(() => {
+    document.documentElement.lang = lang
+    if (pathname === '/') {
+      document.title = getStrings(lang).meta.title
+    }
+  }, [lang, pathname])
 
   const setLang = useCallback((locale: Locale) => {
     setLangState(locale)
-    window.localStorage.setItem(STORAGE_KEY, locale)
-    document.documentElement.lang = locale
+    persistLocale(locale)
   }, [])
 
   const value = useMemo<LangContextValue>(
     () => ({ lang, strings: getStrings(lang), setLang }),
     [lang, setLang]
   )
-
-  // 语言切换后同步文档标题（metadata 以 zh-CN 为基准输出）
-  useEffect(() => {
-    document.title = getStrings(lang).meta.title
-  }, [lang])
 
   return <LangContext.Provider value={value}>{children}</LangContext.Provider>
 }

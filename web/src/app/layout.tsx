@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
+import { cookies, headers } from 'next/headers'
 import { zhCN } from '@/i18n/zh-CN'
 import { LangProvider } from '@/i18n/lang-context'
+import { isLocale, parseAcceptLanguage, resolveLocale } from '@/i18n/locale'
 import { TerminalBackdrop } from '@/components/TerminalBackdrop'
 import '@fontsource/noto-sans-sc/400.css'
 import '@fontsource/noto-sans-sc/500.css'
@@ -16,11 +18,19 @@ export const viewport: Viewport = {
   themeColor: '#f6f6f5'
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
+  const cookieStore = await cookies()
+  const headerStore = await headers()
+  const cookieLang = cookieStore.get('hrack-lang')?.value
+  const initialLang =
+    cookieLang && isLocale(cookieLang)
+      ? cookieLang
+      : resolveLocale(parseAcceptLanguage(headerStore.get('accept-language')))
+
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang={initialLang} suppressHydrationWarning>
       <body className="antialiased">
         {/* 主仓 SidebarTint 的画布思想：极淡的环境光晕垫在整页之下 */}
         <div
@@ -29,7 +39,7 @@ export default function RootLayout({
         />
         <TerminalBackdrop />
         <div className="relative z-10">
-          <LangProvider>{children}</LangProvider>
+          <LangProvider initialLang={initialLang}>{children}</LangProvider>
         </div>
       </body>
     </html>

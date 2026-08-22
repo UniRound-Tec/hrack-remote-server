@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   // dev 下允许 127.0.0.1 访问（HMR 握手被默认跨域拦截；值不带协议，见 Next 文档）
   allowedDevOrigins: ['127.0.0.1', 'localhost'],
+  async redirects() {
+    return [
+      { source: '/login', destination: '/auth', permanent: false },
+      { source: '/register', destination: '/auth', permanent: false }
+    ]
+  },
   async rewrites() {
     return [
       {

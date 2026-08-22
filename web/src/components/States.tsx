@@ -7,9 +7,9 @@ import {
   statusLabel,
   type SessionStatus
 } from '@/lib/session-status'
-import { useInView, useReducedMotion } from 'motion/react'
+import { motion, useInView, useReducedMotion } from 'motion/react'
 import { useRef } from 'react'
-import { Eyebrow, Reveal } from './Reveal'
+import { Eyebrow, Reveal, Stagger, fadeUpItem } from './Reveal'
 
 const statusKeys: Record<SessionStatus, string> = {
   working: 'working',
@@ -68,12 +68,16 @@ export function States() {
         ref={containerRef}
         className="mt-10 overflow-hidden rounded-2xl border border-border-default bg-content"
       >
-        <div className="grid grid-cols-1 gap-px bg-border-default sm:grid-cols-2 lg:grid-cols-3">
+        <Stagger className="grid grid-cols-1 gap-px bg-border-default sm:grid-cols-2 lg:grid-cols-3">
           {sessionStatuses.map((status, index) => {
             const color = statusColor[status]
             const item = strings.states.items[itemKeys[status]]
             return (
-              <div key={status} className="bg-content p-5">
+              <motion.div
+                key={status}
+                variants={fadeUpItem}
+                className="bg-content p-5"
+              >
                 <div className="flex items-center justify-between">
                   <span
                     className={`size-3 rounded-full transition-colors duration-700 ${status === 'working' && lit ? 'dot-breathe' : ''}`}
@@ -105,10 +109,10 @@ export function States() {
                 <p className="mt-1.5 text-[13px] leading-relaxed text-text-muted">
                   {item}
                 </p>
-              </div>
+              </motion.div>
             )
           })}
-        </div>
+        </Stagger>
       </div>
     </section>
   )

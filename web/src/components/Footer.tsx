@@ -25,7 +25,7 @@ export function Footer() {
             href={REPO_URL}
             target="_blank"
             rel="noreferrer"
-            className="transition-colors hover:text-text-secondary"
+            className="transition-colors duration-200 hover:text-text-secondary"
           >
             {strings.footer.links.github}
           </a>
@@ -33,7 +33,7 @@ export function Footer() {
             href={RELEASES_URL}
             target="_blank"
             rel="noreferrer"
-            className="transition-colors hover:text-text-secondary"
+            className="transition-colors duration-200 hover:text-text-secondary"
           >
             {strings.footer.links.releases}
           </a>
@@ -41,7 +41,7 @@ export function Footer() {
             href={LICENSE_URL}
             target="_blank"
             rel="noreferrer"
-            className="transition-colors hover:text-text-secondary"
+            className="transition-colors duration-200 hover:text-text-secondary"
           >
             {strings.footer.links.license}
           </a>

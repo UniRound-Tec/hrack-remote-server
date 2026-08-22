@@ -4,7 +4,8 @@ import { useLang } from '@/i18n/lang-context'
 import { deepHarnesses } from '@/lib/harnesses'
 import { getAdapterIcon } from '@/lib/adapterIcons'
 import type { LandingStrings } from '@/i18n'
-import { Eyebrow, Reveal } from './Reveal'
+import { motion, useReducedMotion } from 'motion/react'
+import { Eyebrow, Reveal, fadeUpItem } from './Reveal'
 
 function statusVocab(strings: LandingStrings, key: string): string {
   const group = strings.harnesses.statuses as Record<string, string>
@@ -13,6 +14,7 @@ function statusVocab(strings: LandingStrings, key: string): string {
 
 export function Harnesses() {
   const { strings } = useLang()
+  const reduce = useReducedMotion()
 
   return (
     <section
@@ -29,8 +31,16 @@ export function Harnesses() {
         </p>
       </Reveal>
 
-      <Reveal delay={0.06}>
-        <ul className="mt-10 overflow-hidden rounded-2xl border border-border-default bg-content">
+      <motion.ul
+          className="mt-10 overflow-hidden rounded-2xl border border-border-default bg-content"
+          initial={reduce ? false : 'hidden'}
+          whileInView="show"
+          viewport={{ once: true, amount: 0.12 }}
+          variants={{
+            hidden: {},
+            show: { transition: { staggerChildren: 0.05 } }
+          }}
+        >
           {deepHarnesses.map((harness) => {
             const Icon = getAdapterIcon(harness.id)
             const runtimes = harness.runtimes
@@ -39,9 +49,10 @@ export function Harnesses() {
               )
               .join(' · ')
             return (
-              <li
+              <motion.li
                 key={harness.id}
-                className="flex flex-col gap-2 border-b border-border-faint px-5 py-4 last:border-b-0 sm:flex-row sm:items-center sm:gap-6 sm:hover:bg-surface-hover"
+                variants={fadeUpItem}
+                className="flex flex-col gap-2 border-b border-border-faint px-5 py-4 last:border-b-0 transition-colors duration-200 sm:flex-row sm:items-center sm:gap-6 sm:hover:bg-surface-hover"
               >
                 <div className="flex min-w-0 items-center gap-2.5 sm:w-52 sm:shrink-0">
                   <span className="inline-flex size-5 shrink-0 items-center justify-center">
@@ -61,11 +72,10 @@ export function Harnesses() {
                 <span className="font-maple text-[10px] tracking-wide text-text-faint uppercase sm:shrink-0">
                   {runtimes}
                 </span>
-              </li>
+              </motion.li>
             )
           })}
-        </ul>
-      </Reveal>
+        </motion.ul>
 
       <Reveal delay={0.1}>
         <p className="mt-6 max-w-3xl text-[13px] leading-relaxed text-text-faint">

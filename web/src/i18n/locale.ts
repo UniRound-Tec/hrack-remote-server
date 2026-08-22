@@ -25,6 +25,15 @@ export function resolveLocale(languages: readonly string[]): Locale {
   return 'en'
 }
 
+/** `Accept-Language: zh-CN,zh;q=0.9,en;q=0.8` → `['zh-CN', 'zh', 'en']` */
+export function parseAcceptLanguage(header: string | null | undefined): string[] {
+  if (!header) return []
+  return header
+    .split(',')
+    .map((part) => part.split(';')[0]?.trim() ?? '')
+    .filter((tag) => tag.length > 0)
+}
+
 export function detectLocale(): Locale {
   if (typeof navigator === 'undefined') return 'en'
   const languages =

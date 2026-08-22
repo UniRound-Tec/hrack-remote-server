@@ -11,6 +11,7 @@ export const en = {
     about: 'About',
     download: 'Download',
     login: 'Sign in',
+    register: 'Register',
     language: 'Switch language',
     skipToContent: 'Skip to main content'
   },
@@ -27,6 +28,7 @@ export const en = {
     promptWorking: (n: number) => (n === 1 ? '1 working' : `${n} working`),
     promptQuiet: 'All quiet',
     download: 'Download HRack',
+    downloadFor: (os: string) => `Download for ${os}`,
     github: 'GitHub',
     remote: 'Generate remote URL',
     platforms: 'Windows · macOS · Linux',
@@ -34,10 +36,51 @@ export const en = {
     rackHint: 'Drag it — same panel as the desktop floating monitor',
     rackLabel: 'HRack floating monitor'
   },
-  login: {
-    title: 'Sign in to HRack',
-    body: 'Accounts are on the way. Once live, this becomes the console for your remote-control URL \u2014 one URL that turns your phone into an HRack remote.',
-    back: 'Back to home'
+  auth: {
+    eyebrow: 'remote',
+    consoleLabel: 'console',
+    sessionsLabel: 'sessions',
+    consoleIdle: 'idle',
+    pointKeys: ['desktop', 'phone', 'url'],
+    login: {
+      pageTitle: 'Sign in · HRack',
+      title: 'Plug into the remote console',
+      lead: 'Once you sign in, this page issues one remote URL. Your phone becomes the remote; the desktop session stays put.',
+      submit: 'Sign in',
+      switchHint: 'No account yet?',
+      switch: 'Register'
+    },
+    register: {
+      pageTitle: 'Register · HRack',
+      title: 'Create a remote account',
+      lead: 'An account comes first. The desktop terminal does not move; approvals and questions travel to your phone.',
+      submit: 'Create account',
+      switchHint: 'Already have an account?',
+      switch: 'Sign in'
+    },
+    points: [
+      'The session keeps running on the desk. The native TUI does not leave the box.',
+      'Approvals, questions, errors \u2014 when a lamp lights, the phone can take it.',
+      'One URL is the whole handshake. No second terminal.'
+    ],
+    email: 'Email',
+    emailPlaceholder: 'you@studio.dev',
+    password: 'Password',
+    confirm: 'Confirm password',
+    passwordHint: 'At least 8 characters',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
+    submitting: 'Connecting\u2026',
+    unavailable: 'Account service is not wired yet. The form is ready \u2014 this is where the console will open.',
+    back: 'Back to home',
+    errors: {
+      emailRequired: 'Enter an email.',
+      emailInvalid: 'That email does not look right.',
+      passwordRequired: 'Enter a password.',
+      passwordShort: 'Password must be at least 8 characters.',
+      confirmRequired: 'Enter the password again.',
+      confirmMismatch: 'The two passwords do not match.'
+    }
   },
   status: {
     working: 'working',
