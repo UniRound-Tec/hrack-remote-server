@@ -24,12 +24,6 @@ export function Hero() {
 
   return (
     <section className="relative mx-auto flex w-full flex-col items-center pt-12 pb-16 text-center lg:pt-16 lg:pb-20">
-      {/* 顶部火焰色微光晕，给纯白背景一点温度 */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(640px_300px_at_50%_-40px,color-mix(in_srgb,var(--hrack-accent-flame)_7%,transparent),transparent_70%)]"
-      />
-
       <div className="flex w-full max-w-6xl min-w-0 flex-col items-center px-5 sm:px-8">
         <motion.div {...fadeUp(0)} className="flex flex-col items-center">
           <p className="flex items-center gap-2.5 font-maple text-[10px] font-medium tracking-[0.28em] text-text-faint uppercase">

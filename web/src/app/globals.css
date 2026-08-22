@@ -164,6 +164,13 @@ html {
 
 body {
   background-color: var(--hrack-bg-app);
+  background-image: radial-gradient(
+    640px 300px at 50% -40px,
+    color-mix(in srgb, var(--hrack-accent-flame) 7%, transparent),
+    transparent 70%
+  );
+  background-repeat: no-repeat;
+  background-position: top center;
   color: var(--hrack-text-primary);
   font-family: var(--font-sans);
   overflow-x: clip;
@@ -258,42 +265,65 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* 管线图（FLOW）：信号点沿轨道流动                                      */
+/* 管线图：信号点沿水平/垂直导线滑动                                      */
 /* ------------------------------------------------------------------ */
 
-@keyframes hrack-packet {
+@keyframes hrack-wire-x {
   0% {
-    offset-distance: 0%;
+    left: 0%;
     opacity: 0;
   }
-  6% {
+  10% {
     opacity: 1;
   }
-  94% {
+  90% {
     opacity: 1;
   }
   100% {
-    offset-distance: 100%;
+    left: 100%;
     opacity: 0;
   }
 }
 
-.flow-packet {
-  offset-rotate: 0deg;
-  animation: hrack-packet var(--packet-duration, 4s) linear infinite;
-  animation-delay: var(--packet-delay, 0s);
-}
-
-/* 轨道虚线缓慢流动（静态轨道的生命感） */
-@keyframes hrack-dash {
-  to {
-    stroke-dashoffset: -12;
+@keyframes hrack-wire-y {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
   }
 }
 
-.flow-lane {
-  stroke-dasharray: 3 9;
-  animation: hrack-dash 1.2s linear infinite;
+.flow-wire-dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.flow-wire-dot-x {
+  top: 50%;
+  margin-top: -2.5px;
+  margin-left: -2.5px;
+  animation: hrack-wire-x var(--packet-duration, 2.8s) linear infinite;
+  animation-delay: var(--packet-delay, 0s);
+}
+
+.flow-wire-dot-y {
+  left: 50%;
+  margin-top: -2.5px;
+  margin-left: -2.5px;
+  animation: hrack-wire-y var(--packet-duration, 2.2s) linear infinite;
+  animation-delay: var(--packet-delay, 0s);
 }
 
 /* ------------------------------------------------------------------ */
@@ -328,13 +358,11 @@ body {
   .attention-complete,
   .tt-cursor,
   .dot-breathe,
-  .flow-packet,
-  .flow-lane {
+  .flow-wire-dot {
     animation: none !important;
   }
 
-  /* SMIL 信号点无法用 CSS 停帧：直接隐藏，轨道保留 */
-  .flow-packet-smil {
+  .flow-wire-dot {
     display: none;
   }
 
@@ -342,10 +370,5 @@ body {
     border-color: var(--hrack-status-needsYou);
     box-shadow:
       0 0 0 3px color-mix(in srgb, var(--hrack-status-needsYou) 22%, transparent);
-  }
-
-  .flow-packet {
-    offset-distance: 50%;
-    opacity: 0.9;
   }
 }

@@ -2,123 +2,119 @@
 
 import { useLang } from '@/i18n/lang-context'
 import { ShieldCheck } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { Eyebrow, Reveal } from './Reveal'
 
-/**
- * 旁路观察管线图（README ASCII 图的活性化）：
- * 上路 PTY 传字节（中性色），下路 Hooks/SSE/Extension 传信号（工作蓝）。
- * 信号点用 SMIL animateMotion 沿路径流动；reduced-motion 时隐藏信号点。
- */
-const PTY_PATH = 'M150,112 C 260,112 400,44 520,44'
-const FORK_PATH = 'M84,152 C 84,196 120,206 168,206'
-const MID_PATH = 'M278,206 H 340'
-const OUT_PATH = 'M462,206 H 508'
-
 function Node({
-  x,
-  y,
-  w,
-  h,
   label,
-  strong = false
+  origin = false
 }: {
-  x: number
-  y: number
-  w: number
-  h: number
   label: string
-  strong?: boolean
+  origin?: boolean
 }) {
   return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={w}
-        height={h}
-        rx={10}
-        fill="var(--hrack-bg-surface)"
-        stroke={
-          strong
-            ? 'var(--hrack-border-strong)'
-            : 'var(--hrack-border-default)'
-        }
-      />
-      <foreignObject x={x} y={y} width={w} height={h}>
-        <div
-          style={{
-            display: 'flex',
-            height: '100%',
-            width: '100%',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 8px',
-            textAlign: 'center',
-            fontSize: 12.5,
-            lineHeight: 1.3,
-            color: 'var(--hrack-text-secondary)'
-          }}
+    <div
+      className={`flex min-h-11 items-center justify-center rounded-md border px-3.5 py-2 text-center text-[13px] font-medium leading-snug tracking-tight text-text-primary ${
+        origin ? 'border-border-strong' : 'border-border-default'
+      }`}
+    >
+      {label}
+    </div>
+  )
+}
+
+function Wire({
+  label,
+  tone = 'neutral',
+  duration = 2.8
+}: {
+  label: string
+  tone?: 'neutral' | 'signal'
+  duration?: number
+}) {
+  const line =
+    tone === 'signal'
+      ? 'bg-[color-mix(in_srgb,var(--hrack-status-working)_40%,transparent)]'
+      : 'bg-border-strong'
+  const dot =
+    tone === 'signal' ? 'bg-status-working-dot' : 'bg-[var(--hrack-accent-spark)]'
+  const text = tone === 'signal' ? 'text-status-working' : 'text-text-faint'
+
+  return (
+    <div className="relative flex min-h-11 min-w-0 items-center">
+      <div className={`relative h-px w-full ${line}`}>
+        <span
+          className={`flow-wire-dot flow-wire-dot-x ${dot}`}
+          style={
+            {
+              '--packet-duration': `${duration}s`,
+              '--packet-delay': '0s'
+            } as CSSProperties
+          }
+        />
+        <span
+          className={`flow-wire-dot flow-wire-dot-x ${dot}`}
+          style={
+            {
+              '--packet-duration': `${duration}s`,
+              '--packet-delay': `-${duration / 2}s`
+            } as CSSProperties
+          }
+        />
+      </div>
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span
+          className={`bg-content px-1.5 font-maple text-[10px] tracking-wide ${text}`}
         >
           {label}
-        </div>
-      </foreignObject>
-    </g>
+        </span>
+      </span>
+    </div>
   )
 }
 
-function Lane({
-  d,
-  label,
-  labelX,
-  labelY,
-  color
-}: {
-  d: string
-  label: string
-  labelX: number
-  labelY: number
-  color: string
-}) {
+function Fork({ label }: { label: string }) {
   return (
-    <g>
-      <path
-        d={d}
-        fill="none"
-        stroke="var(--hrack-border-strong)"
-        strokeWidth="1"
-        className="flow-lane"
-      />
-      <text
-        x={labelX}
-        y={labelY}
-        className="font-maple"
-        fontSize="9"
-        fill={color}
-        textAnchor="middle"
-      >
+    <div className="relative flex h-9 items-stretch justify-center">
+      <div className="relative w-px bg-[color-mix(in_srgb,var(--hrack-status-working)_40%,transparent)]">
+        <span
+          className="flow-wire-dot flow-wire-dot-y bg-status-working-dot"
+          style={
+            {
+              '--packet-duration': '2.2s',
+              '--packet-delay': '-0.4s'
+            } as CSSProperties
+          }
+        />
+      </div>
+      <span className="absolute top-1/2 left-[calc(50%+10px)] -translate-y-1/2 whitespace-nowrap font-maple text-[10px] tracking-wide text-status-working">
         {label}
-      </text>
-    </g>
+      </span>
+    </div>
   )
 }
 
-function Packet({
-  d,
-  begin,
-  dur,
-  color,
-  r = 3
+function VWire({
+  label,
+  tone = 'neutral'
 }: {
-  d: string
-  begin: string
-  dur: number
-  color: string
-  r?: number
+  label: string
+  tone?: 'neutral' | 'signal'
 }) {
+  const line =
+    tone === 'signal'
+      ? 'bg-[color-mix(in_srgb,var(--hrack-status-working)_40%,transparent)]'
+      : 'bg-border-strong'
+  const text = tone === 'signal' ? 'text-status-working' : 'text-text-faint'
+
   return (
-    <circle r={r} fill={color} className="flow-packet-smil">
-      <animateMotion dur={`${dur}s`} begin={begin} repeatCount="indefinite" path={d} />
-    </circle>
+    <div className="flex flex-col items-center py-2">
+      <div className={`h-6 w-px ${line}`} />
+      <span className={`py-1 font-maple text-[10px] tracking-wide ${text}`}>
+        {label}
+      </span>
+      <div className={`h-6 w-px ${line}`} />
+    </div>
   )
 }
 
@@ -142,58 +138,62 @@ export function Flow() {
       </Reveal>
 
       <Reveal delay={0.08}>
-        <div className="mt-10 overflow-x-auto rounded-2xl border border-border-default bg-content p-4 shadow-[0_20px_50px_-30px_var(--hrack-shadow-popover)] sm:p-6">
-          <svg
-            viewBox="0 0 672 240"
-            className="h-auto w-full min-w-[560px]"
-            role="img"
-            aria-label={strings.flow.heading}
-          >
-            {/* 上路：PTY 字节流（中性） */}
-            <Lane d={PTY_PATH} label="pty · bytes" labelX={330} labelY={92} color="var(--hrack-text-faint)" />
-            {/* 下路：事件信号（工作蓝） */}
-            <Lane d={FORK_PATH} label="hooks · sse · extension" labelX={128} labelY={176} color="var(--hrack-status-working)" />
-            <Lane d={MID_PATH} label="translate" labelX={309} labelY={196} color="var(--hrack-status-working)" />
-            <Lane d={OUT_PATH} label="sync" labelX={485} labelY={196} color="var(--hrack-status-working)" />
+        <div className="mt-10 overflow-hidden rounded-2xl border border-border-default bg-content">
+          <div className="hidden px-6 py-6 md:block lg:px-8">
+            <div className="grid grid-cols-[minmax(8.75rem,11rem)_minmax(3.5rem,1fr)_minmax(8.75rem,11rem)_minmax(3.5rem,1fr)_minmax(10.5rem,13.5rem)] grid-rows-[auto_auto_auto] items-center">
+              <Node label={n.cli} origin />
+              <div className="col-span-3 px-3">
+                <Wire label="pty · bytes" duration={3.2} />
+              </div>
+              <Node label={n.tui} />
 
-            <Node x={24} y={94} w={120} h={56} label={n.cli} strong />
-            <Node x={520} y={20} w={120} h={48} label={n.tui} />
-            <Node x={168} y={182} w={110} h={48} label={n.adapter} />
-            <Node x={340} y={182} w={122} h={48} label={n.status} />
-            <Node x={508} y={178} w={140} h={56} label={n.surfaces} />
+              <Fork label="hooks · sse · extension" />
+              <div className="col-span-4" />
 
-            {/* 字节流包（中性深色） */}
-            <Packet d={PTY_PATH} begin="0s" dur={3.4} color="var(--hrack-accent-spark)" />
-            <Packet d={PTY_PATH} begin="-1.7s" dur={3.4} color="var(--hrack-accent-spark)" />
-            {/* 事件信号包（工作蓝） */}
-            <Packet d={FORK_PATH} begin="-0.5s" dur={2.6} color="var(--hrack-status-working-dot)" r={3.5} />
-            <Packet d={FORK_PATH} begin="-1.9s" dur={2.6} color="var(--hrack-status-working-dot)" r={3.5} />
-            <Packet d={MID_PATH} begin="-1.2s" dur={1.4} color="var(--hrack-status-working-dot)" r={3.5} />
-            <Packet d={OUT_PATH} begin="-0.4s" dur={1.3} color="var(--hrack-status-working-dot)" r={3.5} />
-          </svg>
+              <Node label={n.adapter} />
+              <div className="px-3">
+                <Wire label="translate" tone="signal" duration={1.6} />
+              </div>
+              <Node label={n.status} />
+              <div className="px-3">
+                <Wire label="sync" tone="signal" duration={1.5} />
+              </div>
+              <Node label={n.surfaces} />
+            </div>
+          </div>
+
+          <div className="flex flex-col items-stretch px-5 py-5 md:hidden">
+            <Node label={n.cli} origin />
+            <VWire label="pty · bytes" />
+            <Node label={n.tui} />
+            <VWire label="hooks · sse · extension" tone="signal" />
+            <Node label={n.adapter} />
+            <VWire label="translate" tone="signal" />
+            <Node label={n.status} />
+            <VWire label="sync" tone="signal" />
+            <Node label={n.surfaces} />
+          </div>
+
+          <ol className="grid grid-cols-1 gap-px border-t border-border-default bg-border-default md:grid-cols-3">
+            {strings.flow.steps.map((step, index) => (
+              <li key={step.title} className="bg-content px-5 py-5">
+                <p className="font-maple text-[11px] text-text-faint tabular-nums">
+                  {String(index + 1).padStart(2, '0')}
+                </p>
+                <h3 className="mt-2 text-[15px] font-semibold tracking-tight text-text-primary">
+                  {step.title}
+                </h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-text-muted">
+                  {step.desc}
+                </p>
+              </li>
+            ))}
+          </ol>
         </div>
       </Reveal>
 
-      <ol className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-3">
-        {strings.flow.steps.map((step, index) => (
-          <Reveal key={step.title} delay={0.1 + index * 0.08}>
-            <li className="h-full rounded-xl border border-border-subtle bg-content p-5">
-              <p className="font-maple text-[11px] text-text-faint tabular-nums">
-                {String(index + 1).padStart(2, '0')}
-              </p>
-              <h3 className="mt-2.5 text-[16px] font-semibold tracking-tight text-text-primary">
-                {step.title}
-              </h3>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-text-muted">
-                {step.desc}
-              </p>
-            </li>
-          </Reveal>
-        ))}
-      </ol>
-
-      <Reveal delay={0.15}>
-        <p className="mt-6 flex items-start gap-2 text-[13px] leading-relaxed text-text-strong">
+      <Reveal delay={0.12}>
+        <p className="mt-5 flex items-start gap-2 text-[13px] leading-relaxed text-text-strong">
           <ShieldCheck
             className="mt-0.5 size-4 shrink-0 text-status-done"
             strokeWidth={1.75}
