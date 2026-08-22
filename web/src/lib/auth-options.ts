@@ -6,7 +6,7 @@ import { assertNotLastAdmin, countActiveAdmins } from './admin/last-admin'
 import { getDb } from './db'
 import * as schema from './db/schema'
 import { isMailReady, sendVerificationOTP } from './mail/provider'
-import { deleteUnverifiedCredentialOnlyUserByEmail } from './oauth-link'
+import { mapTrustedOAuthProfileToUser } from './oauth-link'
 import { loadTrustedOrigins } from './settings/trusted-origins'
 import {
   loadRuntimeConfig,
@@ -59,12 +59,7 @@ export function createAuth(
             github: {
               ...runtime.github,
               requireEmailVerification: runtime.emailVerificationRequired,
-              mapProfileToUser: async (profile: { email?: string | null }) => {
-                if (profile.email) {
-                  await deleteUnverifiedCredentialOnlyUserByEmail(profile.email)
-                }
-                return { ...profile }
-              }
+              mapProfileToUser: mapTrustedOAuthProfileToUser
             }
           }
         : {}),
@@ -73,12 +68,7 @@ export function createAuth(
             google: {
               ...runtime.google,
               requireEmailVerification: runtime.emailVerificationRequired,
-              mapProfileToUser: async (profile: { email?: string | null }) => {
-                if (profile.email) {
-                  await deleteUnverifiedCredentialOnlyUserByEmail(profile.email)
-                }
-                return { ...profile }
-              }
+              mapProfileToUser: mapTrustedOAuthProfileToUser
             }
           }
         : {})

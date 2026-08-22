@@ -84,6 +84,11 @@ export const zhTW = {
     latestOtp: '以最新一封為準',
     resend: '重發驗證碼',
     resendIn: (seconds: number) => `${seconds} 秒後可重發`,
+    socialDivider: '或者',
+    social: {
+      github: '使用 GitHub 繼續',
+      google: '使用 Google 繼續'
+    },
     back: '返回首頁',
     errors: {
       emailRequired: '填寫電子郵件。',

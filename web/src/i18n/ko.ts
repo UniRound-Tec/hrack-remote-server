@@ -84,6 +84,11 @@ export const ko = {
     latestOtp: '가장 최근 메일 사용',
     resend: '코드 다시 보내기',
     resendIn: (seconds: number) => `${seconds}초 후 다시 보내기`,
+    socialDivider: '또는',
+    social: {
+      github: 'GitHub로 계속',
+      google: 'Google로 계속'
+    },
     back: '홈으로 돌아가기',
     errors: {
       emailRequired: '이메일을 입력하세요.',

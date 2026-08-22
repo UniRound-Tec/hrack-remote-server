@@ -1,5 +1,7 @@
 'use client'
 
+import Github from '@lobehub/icons/es/Github/components/Mono'
+import Google from '@lobehub/icons/es/Google/components/Color'
 import { useLang } from '@/i18n/lang-context'
 import { authClient } from '@/lib/auth-client'
 import { allowNext } from '@/lib/auth-navigation'
@@ -55,6 +57,8 @@ type AuthMethods = {
   emailVerificationRequired: boolean
 }
 
+type OAuthProvider = 'github' | 'google'
+
 type ClientError = {
   status?: number
   code?: string
@@ -101,6 +105,9 @@ export function AuthPanel({
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
+  const [oauthSubmitting, setOauthSubmitting] = useState<OAuthProvider | null>(
+    null
+  )
   const [methods, setMethods] = useState<AuthMethods | null>(null)
   const [cooldown, setCooldown] = useState(0)
   const [feedback, setFeedback] = useState<Feedback | null>(() => {
@@ -295,6 +302,23 @@ export function AuthPanel({
       }
     } catch {
       // The resend response is intentionally non-enumerating; keep cooldown.
+    }
+  }
+
+  async function signInWith(provider: OAuthProvider): Promise<void> {
+    setOauthSubmitting(provider)
+    setFeedback(null)
+    try {
+      const result = await authClient.signIn.social({
+        provider,
+        callbackURL: allowNext(nextPath) ?? '/dashboard',
+        errorCallbackURL: '/auth'
+      })
+      if (result.error) setFeedback('oauthFailed')
+    } catch {
+      setFeedback('oauthFailed')
+    } finally {
+      setOauthSubmitting(null)
     }
   }
 
@@ -605,6 +629,36 @@ export function AuthPanel({
                 )}
               </form>
 
+              {mode !== 'verify' && (methods?.github || methods?.google) ? (
+                <div className="mt-6">
+                  <div className="flex items-center gap-3" aria-hidden>
+                    <span className="h-px flex-1 bg-border-default" />
+                    <span className="font-maple text-[10px] tracking-[0.18em] text-text-faint uppercase">
+                      {strings.auth.socialDivider}
+                    </span>
+                    <span className="h-px flex-1 bg-border-default" />
+                  </div>
+                  <div className="mt-4 grid gap-2">
+                    {methods.github ? (
+                      <OAuthButton
+                        disabled={oauthSubmitting !== null}
+                        icon={<Github className="size-4" />}
+                        label={strings.auth.social.github}
+                        onClick={() => void signInWith('github')}
+                      />
+                    ) : null}
+                    {methods.google ? (
+                      <OAuthButton
+                        disabled={oauthSubmitting !== null}
+                        icon={<Google className="size-4" />}
+                        label={strings.auth.social.google}
+                        onClick={() => void signInWith('google')}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
               <p className="mt-5 text-center text-[13px] text-text-muted">
                 {copy.switchHint}{' '}
                 <button
@@ -633,6 +687,30 @@ export function AuthPanel({
       </main>
       <Footer />
     </div>
+  )
+}
+
+function OAuthButton({
+  disabled,
+  icon,
+  label,
+  onClick
+}: {
+  disabled: boolean
+  icon: ReactNode
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="hrack-press inline-flex h-11 items-center justify-center gap-2 rounded-full border border-border-default bg-content px-4 text-[13px] font-medium text-text-secondary hover:border-border-strong hover:text-text-primary disabled:pointer-events-none disabled:opacity-60"
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
   )
 }
 

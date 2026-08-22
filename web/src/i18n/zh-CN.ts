@@ -87,6 +87,11 @@ export const zhCN = {
     latestOtp: '以最新一封为准',
     resend: '重发验证码',
     resendIn: (seconds: number) => `${seconds} 秒后可重发`,
+    socialDivider: '或者',
+    social: {
+      github: '使用 GitHub 继续',
+      google: '使用 Google 继续'
+    },
     back: '返回首页',
     errors: {
       emailRequired: '填写邮箱。',

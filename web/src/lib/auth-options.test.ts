@@ -1,10 +1,12 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { closeDb, getDb } from './db'
-import { user } from './db/auth-schema'
+import { account, user } from './db/auth-schema'
 import { createAuth } from './auth-options'
+import type { RuntimeAuthConfig } from './settings/resolve'
 
 const BASE_URL = 'http://localhost:3000'
 const PASSWORD = 'correct horse battery staple'
@@ -24,6 +26,105 @@ function jsonRequest(pathname: string, body: Record<string, unknown>): Request {
 
 function testAuth(emailVerificationRequired: boolean) {
   return createAuth({ emailVerificationRequired })
+}
+
+function googleAuth(emailVerificationRequired: boolean) {
+  return createAuth({
+    emailVerificationRequired,
+    google: {
+      clientId: 'google-test-client',
+      clientSecret: 'google-test-secret',
+      verifyIdToken: async () => true
+    }
+  } as unknown as RuntimeAuthConfig)
+}
+
+function googleIdToken({
+  email,
+  emailVerified,
+  sub
+}: {
+  email?: string
+  emailVerified: boolean
+  sub: string
+}): string {
+  const encode = (value: Record<string, unknown>) =>
+    Buffer.from(JSON.stringify(value)).toString('base64url')
+  return `${encode({ alg: 'none', typ: 'JWT' })}.${encode({
+    aud: 'google-test-client',
+    email,
+    email_verified: emailVerified,
+    name: 'OAuth user',
+    picture: '',
+    sub
+  })}.test-signature`
+}
+
+async function googleIdTokenSignIn(
+  auth: ReturnType<typeof googleAuth>,
+  token: string
+): Promise<Response> {
+  return auth.handler(
+    jsonRequest('/sign-in/social', {
+      provider: 'google',
+      callbackURL: '/dashboard',
+      errorCallbackURL: '/auth',
+      idToken: { token }
+    })
+  )
+}
+
+function cookieHeader(response: Response): string {
+  return response.headers
+    .get('set-cookie')!
+    .split(/,(?=[^;,]+=)/)
+    .map((value) => value.split(';')[0])
+    .join('; ')
+}
+
+async function googleCallback(
+  auth: ReturnType<typeof googleAuth>,
+  token: string
+): Promise<Response> {
+  const start = await auth.handler(
+    jsonRequest('/sign-in/social', {
+      provider: 'google',
+      callbackURL: '/dashboard',
+      errorCallbackURL: '/auth',
+      disableRedirect: true
+    })
+  )
+  const started = (await start.json()) as { url: string }
+  const state = new URL(started.url).searchParams.get('state')
+  expect(state).toBeTruthy()
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: string | URL | Request) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.toString()
+            : input
+      if (url !== 'https://oauth2.googleapis.com/token') {
+        throw new Error(`Unexpected OAuth request: ${url}`)
+      }
+      return Response.json({
+        access_token: 'google-test-access',
+        expires_in: 3600,
+        id_token: token,
+        token_type: 'Bearer'
+      })
+    })
+  )
+
+  return auth.handler(
+    new Request(
+      `${BASE_URL}/api/auth/callback/google?code=test-code&state=${encodeURIComponent(state!)}`,
+      { headers: { cookie: cookieHeader(start) } }
+    )
+  )
 }
 
 async function signUp(
@@ -60,6 +161,7 @@ beforeEach(() => {
 
 afterEach(() => {
   closeDb()
+  vi.unstubAllGlobals()
   vi.unstubAllEnvs()
   for (const dir of dirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true })
@@ -137,6 +239,117 @@ describe('Better Auth contract', () => {
     expect(verified.headers.get('set-cookie')).toContain(
       'better-auth.session_token'
     )
+  })
+
+  it('requires the same verification policy for an unverified Google identity', async () => {
+    vi.stubEnv('NODE_ENV', 'test')
+    const auth = googleAuth(true)
+    const response = await googleIdTokenSignIn(
+      auth,
+      googleIdToken({
+        email: 'unverified-google@example.test',
+        emailVerified: false,
+        sub: 'google-unverified'
+      })
+    )
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'EMAIL_NOT_VERIFIED'
+    })
+    expect(response.headers.get('set-cookie')).toBeNull()
+  })
+
+  it('redirects an unverified Google callback to the verification state', async () => {
+    vi.stubEnv('NODE_ENV', 'test')
+    const response = await googleCallback(
+      googleAuth(true),
+      googleIdToken({
+        email: 'unverified-callback@example.test',
+        emailVerified: false,
+        sub: 'google-unverified-callback'
+      })
+    )
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe(
+      '/auth?error=email_not_verified'
+    )
+    expect(response.headers.get('set-cookie')).not.toContain(
+      'better-auth.session_token'
+    )
+  })
+
+  it('rejects a Google identity without email without inserting a user', async () => {
+    const auth = googleAuth(false)
+    const response = await googleIdTokenSignIn(
+      auth,
+      googleIdToken({
+        emailVerified: true,
+        sub: 'google-no-email'
+      })
+    )
+
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'USER_EMAIL_NOT_FOUND'
+    })
+    expect(getDb().select().from(user).all()).toHaveLength(0)
+  })
+
+  it('redirects a callback without email instead of returning a server error', async () => {
+    const response = await googleCallback(
+      googleAuth(false),
+      googleIdToken({
+        emailVerified: true,
+        sub: 'google-callback-no-email'
+      })
+    )
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe(
+      '/auth?error=email_not_found'
+    )
+    expect(getDb().select().from(user).all()).toHaveLength(0)
+  })
+
+  it('replaces an unverified credential-only identity before trusted Google sign-in', async () => {
+    const email = 'victim@example.test'
+    const auth = googleAuth(false)
+    const attackerRegistration = await signUp(auth, email)
+    expect(attackerRegistration.status).toBe(200)
+
+    const victimLogin = await googleIdTokenSignIn(
+      auth,
+      googleIdToken({
+        email,
+        emailVerified: true,
+        sub: 'google-victim'
+      })
+    )
+    expect(victimLogin.status).toBe(200)
+    expect(victimLogin.headers.get('set-cookie')).toContain(
+      'better-auth.session_token'
+    )
+
+    const attackerLogin = await auth.handler(
+      jsonRequest('/sign-in/email', { email, password: PASSWORD })
+    )
+    expect(attackerLogin.status).toBe(401)
+
+    const replacement = getDb()
+      .select()
+      .from(user)
+      .where(eq(user.email, email))
+      .get()
+    expect(replacement?.emailVerified).toBe(true)
+    expect(
+      getDb()
+        .select({ providerId: account.providerId })
+        .from(account)
+        .where(eq(account.userId, replacement!.id))
+        .all()
+    ).toEqual([{ providerId: 'google' }])
   })
 
   it.each([

@@ -42,3 +42,23 @@ export async function deleteUnverifiedCredentialOnlyUserByEmail(
     tx.delete(user).where(eq(user.id, existing.id)).run()
   })
 }
+
+type OAuthProfileWithEmail = {
+  email?: string | null
+}
+
+/**
+ * Runs after a trusted provider has resolved its profile, but before Better
+ * Auth selects a user to create or link. Returning no email override when it
+ * is absent lets Better Auth turn that case into its normal email_not_found
+ * callback.
+ */
+export async function mapTrustedOAuthProfileToUser(
+  profile: OAuthProfileWithEmail
+): Promise<{ email?: string }> {
+  if (profile.email) {
+    await deleteUnverifiedCredentialOnlyUserByEmail(profile.email)
+    return { email: profile.email }
+  }
+  return {}
+}

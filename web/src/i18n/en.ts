@@ -85,6 +85,11 @@ export const en = {
     latestOtp: 'Use the newest email',
     resend: 'Resend code',
     resendIn: (seconds: number) => `Resend in ${seconds}s`,
+    socialDivider: 'or',
+    social: {
+      github: 'Continue with GitHub',
+      google: 'Continue with Google'
+    },
     back: 'Back to home',
     errors: {
       emailRequired: 'Enter an email.',

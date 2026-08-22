@@ -84,6 +84,11 @@ export const ja = {
     latestOtp: '最新のメールを使用',
     resend: 'コードを再送',
     resendIn: (seconds: number) => `${seconds} 秒後に再送`,
+    socialDivider: 'または',
+    social: {
+      github: 'GitHub で続行',
+      google: 'Google で続行'
+    },
     back: 'ホームへ戻る',
     errors: {
       emailRequired: 'メールを入力してください。',
