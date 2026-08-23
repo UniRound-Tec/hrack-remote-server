@@ -31,13 +31,38 @@ function isRelayRoomId(value: string): boolean {
   return decoded.byteLength === 16 && decoded.toString('base64url') === value
 }
 
+function isRelayRevokeToken(value: string): boolean {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) return false
+  const decoded = Buffer.from(value, 'base64url')
+  return decoded.byteLength === 32 && decoded.toString('base64url') === value
+}
+
+function pairingPublicOrigin(): string {
+  const value = process.env.BETTER_AUTH_URL
+  if (!value) throw new Error('BETTER_AUTH_URL is required')
+  const url = new URL(value)
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.pathname !== '/' ||
+    url.search ||
+    url.hash ||
+    url.username ||
+    url.password
+  ) {
+    throw new Error('BETTER_AUTH_URL must contain only scheme and authority')
+  }
+  return url.origin
+}
+
 /** Read one SQLite snapshot of the durable pairing identity projection. */
 export function readPairingProjection(): PairingProjection {
+  const publicOrigin = pairingPublicOrigin()
   return getDb().transaction((transaction) => {
     const rows = transaction
       .select({
         id: pairings.id,
         roomId: pairings.roomId,
+        joinUrl: pairings.joinUrl,
         revokeTokenEnc: pairings.revokeTokenEnc
       })
       .from(pairings)
@@ -64,16 +89,22 @@ export function readPairingProjection(): PairingProjection {
         .run()
     }
     for (const row of rows) {
-      if (!isRelayRoomId(row.roomId)) {
+      if (
+        !isRelayRoomId(row.roomId) ||
+        row.joinUrl !== `${publicOrigin}/remote/${row.roomId}`
+      ) {
         quarantine(row.id)
         continue
       }
       try {
+        const token = openPairingRevokeToken(row.revokeTokenEnc)
+        if (!isRelayRevokeToken(token)) {
+          quarantine(row.id)
+          continue
+        }
         rooms.push({
           roomId: row.roomId,
-          revokeDigest: revokeDigest(
-            openPairingRevokeToken(row.revokeTokenEnc)
-          )
+          revokeDigest: revokeDigest(token)
         })
       } catch (error) {
         if (!(error instanceof PairingTokenFormatError)) throw error

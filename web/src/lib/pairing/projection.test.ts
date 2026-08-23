@@ -9,6 +9,11 @@ import { readPairingProjection } from './projection'
 import { sealPairingRevokeToken } from './token'
 
 const dirs: string[] = []
+const RESTORE_TOKEN = Buffer.from(
+  '0123456789abcdef0123456789abcdef',
+  'utf8'
+).toString('base64url')
+const RESTORE_DIGEST = 'lCCDKDlTq8bBjwZVR19NQCqacFrzJhOEozO0hzjPZxo'
 
 beforeEach(() => {
   closeDb()
@@ -17,6 +22,7 @@ beforeEach(() => {
   vi.stubEnv('HRACK_WEB_DATA', dir)
   vi.stubEnv('HRACK_DRIZZLE_DIR', path.join(process.cwd(), 'drizzle'))
   vi.stubEnv('PAIRING_ENC_KEY', Buffer.alloc(32, 8).toString('base64'))
+  vi.stubEnv('BETTER_AUTH_URL', 'https://hrack.example')
 })
 
 afterEach(() => {
@@ -53,9 +59,7 @@ describe('pairing projection', () => {
         userId: 'user-id',
         roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
         joinUrl: 'https://hrack.example/remote/MDEyMzQ1Njc4OWFiY2RlZg',
-        revokeTokenEnc: sealPairingRevokeToken(
-          'restore-token-fixed-32-byte-value!!'
-        ),
+        revokeTokenEnc: sealPairingRevokeToken(RESTORE_TOKEN),
         status: 'active',
         createdAt: Date.now()
       })
@@ -66,7 +70,7 @@ describe('pairing projection', () => {
       rooms: [
         {
           roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
-          revokeDigest: 'wDndF3Q4aUcFtFV_Inz_HDGAIPBhhZjh-0nhwu1KHxs'
+          revokeDigest: RESTORE_DIGEST
         }
       ]
     })
@@ -110,9 +114,7 @@ describe('pairing projection', () => {
         userId: 'deleted-user',
         roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
         joinUrl: 'https://hrack.example/remote/MDEyMzQ1Njc4OWFiY2RlZg',
-        revokeTokenEnc: sealPairingRevokeToken(
-          'restore-token-fixed-32-byte-value!!'
-        ),
+        revokeTokenEnc: sealPairingRevokeToken(RESTORE_TOKEN),
         status: 'active',
         createdAt: Date.now()
       })
@@ -159,9 +161,7 @@ describe('pairing projection', () => {
           userId: 'healthy-user',
           roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
           joinUrl: 'https://hrack.example/remote/MDEyMzQ1Njc4OWFiY2RlZg',
-          revokeTokenEnc: sealPairingRevokeToken(
-            'restore-token-fixed-32-byte-value!!'
-          ),
+          revokeTokenEnc: sealPairingRevokeToken(RESTORE_TOKEN),
           status: 'active',
           createdAt: Date.now()
         },
@@ -182,7 +182,7 @@ describe('pairing projection', () => {
       rooms: [
         {
           roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
-          revokeDigest: 'wDndF3Q4aUcFtFV_Inz_HDGAIPBhhZjh-0nhwu1KHxs'
+          revokeDigest: RESTORE_DIGEST
         }
       ]
     }
@@ -212,9 +212,71 @@ describe('pairing projection', () => {
         userId: 'invalid-room-user',
         roomId: 'not-a-relay-room-id',
         joinUrl: 'https://hrack.example/remote/not-a-relay-room-id',
-        revokeTokenEnc: sealPairingRevokeToken(
-          'restore-token-fixed-32-byte-value!!'
-        ),
+        revokeTokenEnc: sealPairingRevokeToken(RESTORE_TOKEN),
+        status: 'active',
+        createdAt: Date.now()
+      })
+      .run()
+
+    expect(readPairingProjection()).toEqual({ revision: 2, rooms: [] })
+    expect(readPairingProjection()).toEqual({ revision: 2, rooms: [] })
+  })
+
+  it('quarantines a room URL from an incompatible public origin', () => {
+    const now = new Date()
+    getDb()
+      .insert(user)
+      .values({
+        id: 'old-origin-user',
+        name: 'Old Origin User',
+        email: 'old-origin@example.test',
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+        role: 'user',
+        banned: false
+      })
+      .run()
+    getDb()
+      .insert(pairings)
+      .values({
+        id: 'old-origin-pairing',
+        userId: 'old-origin-user',
+        roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
+        joinUrl: 'https://old.example/remote/MDEyMzQ1Njc4OWFiY2RlZg',
+        revokeTokenEnc: sealPairingRevokeToken(RESTORE_TOKEN),
+        status: 'active',
+        createdAt: Date.now()
+      })
+      .run()
+
+    expect(readPairingProjection()).toEqual({ revision: 2, rooms: [] })
+    expect(readPairingProjection()).toEqual({ revision: 2, rooms: [] })
+  })
+
+  it('quarantines a decrypted credential that Relay cannot use', () => {
+    const now = new Date()
+    getDb()
+      .insert(user)
+      .values({
+        id: 'invalid-token-user',
+        name: 'Invalid Token User',
+        email: 'invalid-token@example.test',
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+        role: 'user',
+        banned: false
+      })
+      .run()
+    getDb()
+      .insert(pairings)
+      .values({
+        id: 'invalid-token-pairing',
+        userId: 'invalid-token-user',
+        roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
+        joinUrl: 'https://hrack.example/remote/MDEyMzQ1Njc4OWFiY2RlZg',
+        revokeTokenEnc: sealPairingRevokeToken('not-a-relay-token'),
         status: 'active',
         createdAt: Date.now()
       })
