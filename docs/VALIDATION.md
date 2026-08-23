@@ -1,0 +1,245 @@
+# P2 validation record — 2026-08-20
+
+> The Relay P1–P5 records below are historical standalone-relay validations.
+> Their statements about in-memory rooms disappearing describe that old
+> relay-only deployment. The pairing platform P4 record at the end validates
+> account-owned URLs being restored after Relay and full-stack restarts.
+
+This record distinguishes real-interface checks from in-process tests and keeps failed capacity experiments visible.
+
+## Environment
+
+- Host: Windows 11 Pro `10.0.26200`
+- CPU: AMD engineering-sample processor, 24 logical processors
+- Memory: 47.2 GiB visible to Windows
+- Long soak runtime: Node.js `v24.14.0`, npm `11.9.0`
+- Minimum-runtime calibration: official `node:22-alpine`, Node.js `v22.23.0`, image digest `node@sha256:ab07539e0988b63558ff621f5fbe1077054c39d9809112974fb79993949d41cd`
+- TLS proxy: Nginx `1.31.2`, image digest `nginx@sha256:20316569d8f81a160065d7d2a5eeffc7ca97d79022462ee255fd23fa103a6b5c`
+
+The load generator and relay were separate OS processes. They ran on the same physical host over loopback, so this is a relay/runtime capacity gate, not an Internet-latency benchmark.
+
+## Interface verification
+
+### Production child process
+
+`npm run verify:live` built the production artifacts, launched `dist/server/cli.js` as a separate process, and used real HTTP/WebSocket clients.
+
+```json
+{"result":"passed","interface":"real child process HTTP + WebSocket","basePath":"/remote","checks":["health","create","desktop-phone-pair","seat-theft-blocked","directional-relay","revoke-before-close","restart-invalidates-room","secret-free-logs"]}
+```
+
+### Browser
+
+A real headless Chromium browser performed all of the following against the built site:
+
+- loaded the `/remote/` generation page and checked CSP;
+- created a room through HTTP;
+- captured the generated SVG QR as a PNG and independently decoded it with `jsQR`;
+- confirmed the decoded QR and clipboard contents exactly equalled `joinUrl`;
+- opened the join page and confirmed there was no terminal UI;
+- revoked the room and reloaded the join page to the generic unavailable state.
+
+### HTTPS and WSS
+
+A real Nginx container terminated a one-day, local self-signed certificate and proxied to the independent Node process. The client disabled trust verification only for that temporary certificate; the connection still negotiated real TLS and WebSocket Upgrade.
+
+```json
+{"result":"passed","interface":"HTTPS + WSS through real Nginx TLS reverse proxy","tlsProtocol":"TLSv1.3","checks":["HTTPS page and CSP","HTTPS create and canonical join URL","WSS upgrade","WSS directional relay","HTTPS revoke before WSS close"]}
+```
+
+This proves proxy path preservation and Upgrade behavior, but it is not evidence of public DNS, public-CA certificate renewal, or an external network path.
+
+## Mandatory capacity gate
+
+Profile:
+
+- 2,000 concurrent WebSocket connections in 1,000 paired rooms;
+- 100 rooms continuously active in both directions;
+- one 1 KiB `pty-in` and one 1 KiB `pty-out` per active room every 100ms;
+- independent load process;
+- 30-minute duration;
+- pass criteria: delivery ratio at least 99%, relay p99 below 100ms, no unexpected disconnect, no client buffer beyond 1 MiB, no sustained linear server-memory growth.
+
+Result on Node.js `v24.14.0`:
+
+```json
+{"result":"passed","connections":2000,"rooms":1000,"activeRooms":100,"durationSeconds":1800,"sent":3310400,"received":3310400,"deliveryRatio":1,"p99Ms":4,"maxP99Ms":100,"disconnected":0,"maxClientBufferedBytes":0}
+```
+
+Observed server metrics:
+
+- event-loop utilization settled around 5–6%;
+- event-loop delay p99 stayed around 32ms, including the same approximately 32ms idle baseline produced by `monitorEventLoopDelay` on this Windows host;
+- RSS initially settled around 97–122 MiB, later expanded to a 208–218 MiB allocator/V8 platform;
+- heap showed GC cycles and major-GC drops, including a drop from about 48 MiB to 20 MiB near minute 24 and about 23 MiB after traffic stopped;
+- neither RSS nor heap showed sustained linear growth during the final 14 minutes.
+
+Minimum-runtime calibration on Node.js `v22.23.0` used the same connection/activity profile for 60 seconds:
+
+```json
+{"result":"passed","connections":2000,"rooms":1000,"activeRooms":100,"durationSeconds":60,"sent":110600,"received":110600,"deliveryRatio":1,"p99Ms":13,"maxP99Ms":100,"disconnected":0,"maxClientBufferedBytes":0}
+```
+
+Node 22 peaked around 113 MiB RSS in this shorter run. It was slower than Node 24 but remained inside the gate.
+
+## Expansion experiment — not passed
+
+An intentionally harsher experiment kept the mandatory traffic and additionally made all 100 active rooms send 256 KiB in both directions at the same instant every five seconds.
+
+```json
+{"result":"failed","connections":2000,"rooms":1000,"activeRooms":100,"durationSeconds":60,"sent":107600,"received":107600,"deliveryRatio":1,"p99Ms":189,"maxP99Ms":100,"disconnected":0,"maxClientBufferedBytes":1447}
+```
+
+No frame was lost and no connection failed, but p99 exceeded 100ms. This is an expansion-profile limit, not a passing result. The mandatory gate therefore defaults to no synthetic 256 KiB burst; `LOAD_BURST_BYTES=262144` opts into the separate experiment.
+
+## Remote-host deployment verification
+
+The production image was also deployed to a shared Ubuntu 24.04 x86_64 host with
+4 vCPU, 3.8 GiB RAM, and Docker 29.6.1. The container uses Node.js 22.23.0,
+runs as the unprivileged `node` user with a read-only root filesystem, has a
+768 MiB memory limit, and publishes only `127.0.0.1:8787` for a same-host
+reverse proxy. Its restart policy is `unless-stopped`.
+
+An independent container used real HTTP and WebSocket connections against the
+deployed process. A second run originated on the development workstation and
+crossed the network through an SSH tunnel to the loopback-only upstream.
+
+```json
+{"result":"passed","interface":"deployed HTTP + WebSocket","checks":["health","create","pair","phone-to-desktop","desktop-to-phone","revoke-before-close"]}
+```
+
+A separate temporary relay instance on the same remote host then ran a controlled
+all-active profile. It did not touch or restart the production container:
+
+```json
+{"result":"passed","connections":200,"rooms":100,"activeRooms":100,"durationSeconds":30,"sent":59600,"received":59600,"deliveryRatio":1,"p99Ms":19,"maxP99Ms":100,"disconnected":0,"maxClientBufferedBytes":0}
+```
+
+The temporary load target and load-generator image were removed after the run.
+The production container remained healthy with zero restarts. This remote-host
+smoke result is intentionally smaller than the 2,000-connection mandatory gate
+because the host is shared with unrelated workloads.
+
+The production container was subsequently recreated with the final HTTPS domain
+as `PUBLIC_ORIGIN`. An internal deployed-interface run sent that browser `Origin`,
+verified the canonical join URL, and passed both WebSocket directions and revoke.
+
+The public certificate was valid for the final domain, but the first public check
+found the reverse proxy pointing back to the host's own public HTTP endpoint. That
+configuration returned a self-referential HTTPS `301` for every request. The
+upstream was corrected to the loopback listener and the full public path then
+passed:
+
+```json
+{"result":"passed","interface":"deployed HTTP + WebSocket","checks":["health","create","origin-policy-and-canonical-url","pair","phone-to-desktop","desktop-to-phone","revoke-before-close"]}
+```
+
+A real Chrome session loaded the public generation page, created a room, confirmed
+the canonical public join URL, opened the join page, and confirmed the page is not
+a terminal console. The temporary room was revoked over public WSS and the browser
+then displayed the generic unavailable state.
+
+The OpenResty proxy was hardened with buffering disabled, 75-second read/write
+timeouts, and `access_log off` for the relay location. A before/after counter
+confirmed that the final public verification added no `/remote/` access-log
+records. The exact `/` path redirects to `/remote/`; the redirected response was
+HTTP 200. The production relay remained healthy with zero restarts.
+
+## Browser controller validation
+
+The P4 browser controller was first developed against a real built relay and a
+real Chromium page. Its browser gate occupied the phone seat and exercised the
+actual WebSocket protocol: desktop session snapshot, correlated `drive`, history
+replay, xterm keyboard `pty-in`, base64 `pty-out`, render-complete `pty-ack`, and
+explicit `undrive`. Both the original pairing-page gate and the controller gate
+passed in one browser run.
+
+The controller was then connected to a separately launched production relay and
+a real built Electron HRack instance. HRack created an actual Agent Runtime backed
+by a real `cmd.exe` PTY. Text typed into the browser reached that PTY, the marker
+was observed in both authoritative PTY history and the browser xterm, HRack showed
+its remote-control input lock, and **Back to sessions** removed the lock. The room
+was revoked in cleanup. This gate is maintained as
+`e2e/remote-browser-demo-live.spec.ts` in the HRack repository.
+
+The committed image was then deployed as `hrack-remote-server:f7447c4`. The
+deployed-interface gate passed health, canonical-origin policy, room creation,
+pairing, both WebSocket directions, and revoke over the public HTTPS/WSS path in
+2.2 seconds. Finally, the same browser/Electron gate targeted
+`https://hrack.modplex.app/`: a real Chromium controller traversed the public
+reverse proxy and drove the local real HRack PTY, observed output, released the
+desktop lock, and revoked its room. It passed in 6.5 seconds. The production
+container remained healthy.
+
+A follow-up real Chrome report exposed presentation drift rather than protocol
+corruption: the Claude block logo was rendered with the browser UI/system font,
+the temporary two-color theme, and xterm's default renderer. The captured page
+confirmed that no Maple Mono face or HRack renderer controller had loaded. The
+demo now reuses HRack's pinned xterm/WebGL versions, four licensed Maple Mono web
+faces, complete HRack Dark palette, font-ready bootstrap, and WebGL context-loss
+fallback. CSP was extended narrowly with `font-src 'self'`; a font load failure
+still renders the controller instead of leaving a blank page. The browser gate
+now fails if the font is not loaded, the HRack background drifts, renderer
+activation is skipped, or rendered bytes are not acknowledged. The revised page
+again drove and released a real Electron/`cmd.exe` PTY locally.
+
+Image `hrack-remote-server:0fa097a` was then deployed. The public interface gate
+passed in 2.2 seconds and the renderer-neutral Chromium → public HTTPS/WSS →
+Electron → real PTY gate passed in 7.1 seconds. A refresh of the originally
+reported Chrome tab confirmed the deployed page had Maple Mono ready, selected
+WebGL, completed renderer activation, and used `rgb(31, 31, 31)` HRack Dark. Its
+old room correctly reported unavailable because the single-process deployment
+restart invalidates all in-memory rooms.
+
+## P5 remote creation validation
+
+The pre-App P5 protocol correction made terminal `cols` and `rows` mandatory on
+`create`, so the desktop can spawn the TUI at the phone's actual size instead of
+resizing after its first paint. A blank but structurally safe workspace now
+reaches the occupied desktop and receives a correlated `invalid-workspace`;
+non-string, NUL-containing, oversized, and dimension-invalid frames still fail
+at the protocol boundary. The relay and HRack protocol source files were
+byte-identical after this change, and the relay's 20 unit tests, two browser
+tests, typecheck, and production build passed.
+
+Committed image `hrack-remote-server:f356bdc` was built on the production host
+and deployed without changing its loopback-only port binding or container
+hardening. The public deployed-interface gate passed health, room creation,
+canonical-origin policy, pairing, both WebSocket directions, and revoke in
+2.192 seconds. The container was healthy with zero restarts after deployment.
+
+The HRack P5 live gate then used a real Chromium generation page and the public
+HTTPS/WSS reverse proxy to seat a real local Electron HRack process. The phone
+connection received the desktop's sanitized CLI catalog, remotely created one
+real `AgentSessionRuntime`/`cmd.exe` PTY, and immediately drove it. The gate
+directly verified skip-approval and explicit arguments, a 44×19 initial PTY,
+real input/output and acknowledgements, one-session idempotency on an exact
+create retry, `undrive`, and public room revoke. It passed in 6.2 seconds. No
+Node in-memory relay substituted for this final production-interface check.
+
+## Remaining scope limits
+
+- Single process and single replica only.
+- In-memory rooms intentionally disappear on restart.
+
+## Pairing platform P4 deployment validation
+
+Validated on 2026-08-23 from Windows with Docker Engine 29.5.3. The P4 gate used
+a random Compose project, two random loopback ports, fresh secrets, and a new
+SQLite volume. It built the real Relay/Web images, started Web, Relay, the
+pairing reconciler, and the HTTP-only verification edge, then removed the
+isolated containers, network, volume, and local image tags.
+
+```text
+{"result":"passed","interface":"real Docker restart + SQLite projection + HTTP/WebSocket","recoverySloMs":15000,"relayRecoveryMs":3725,"stackRecoveryMs":119,"checks":["public-root-dashboard-boundary","public-system-and-demo-blocked","anonymous-create-rejected","account-persisted-url","relay-restart-same-url","stack-restart-same-url","bidirectional-websocket-after-restart","ban-removes-room","unban-restores-same-url","account-delete-does-not-resurrect","secret-free-container-logs"],"elapsedMs":28810}
+{"result":"passed","interface":"isolated from-zero Docker Compose deployment","checks":["production-nginx-config","fresh-images-and-services","isolated-sqlite-volume","stateless-relay-volume-boundary","nginx-public-boundary","same-url-after-relay-and-stack-restart"],"elapsedMs":68600}
+```
+
+The gate also validated the production TLS Nginx file with a one-use self-signed
+certificate. The local HTTP edge and its insecure-loopback Relay override were
+bound only to `127.0.0.1`; neither is a production configuration.
+- No multi-region latency result.
+- Public-CA HTTPS/WSS was verified once; certificate renewal lifecycle remains an
+  operations responsibility and has not been exercised.
+- No 20,000-connection expansion result.
+- No claim that `MAX_CONNECTIONS=20000` is measured capacity.

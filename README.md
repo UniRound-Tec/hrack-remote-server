@@ -42,24 +42,35 @@ npm run e2e          # relay Playwright
 
 ```sh
 cd deploy
-cp .env.example .env   # 填 PUBLIC_ORIGIN / RELAY_SERVICE_TOKEN / BETTER_AUTH_SECRET / PAIRING_ENC_KEY
-docker compose --profile edge up -d --build
+cp .env.example .env   # 填域名和长期密钥
+# 放置 certs/fullchain.pem、certs/privkey.pem，并修改 nginx 示例的 server_name
+docker compose config --quiet
+docker compose --profile edge up -d --build --wait
 ```
 
 不想要 compose 自带 nginx 时，去掉 `--profile edge`，用宿主反代按
-`deploy/nginx.hrack.conf.example` 分流 `/` 与 `/remote/`。
+`deploy/nginx.routes.conf` 复刻 `/` 与 `/remote/` 分流。完整的 TLS、备份、恢复和升级
+步骤见 `docs/DEPLOYMENT.md`。
 
 ### 真实恢复门禁
 
-对已经运行且把 Relay 映射到宿主机的测试部署，可执行真实 Docker 恢复门禁：
+从全新镜像、全新 SQLite 卷开始执行隔离式真实 Docker 恢复门禁：
+
+```sh
+npm run verify:p4-deployment
+```
+
+它使用随机项目名和 loopback 端口，不影响当前 3000 端口实例；成功或失败都会只清理
+本次门禁创建的容器和卷。对已经运行且把 Relay 映射到宿主机的测试部署，也可直接执行
+底层恢复门禁：
 
 ```sh
 TARGET_ORIGIN=http://127.0.0.1:3000 \
 RELAY_INTERNAL_ORIGIN=http://127.0.0.1:3001 \
 RELAY_SERVICE_TOKEN="$RELAY_SERVICE_TOKEN" \
-RELAY_CONTAINER=deploy-relay-1 \
-WEB_CONTAINER=deploy-web-1 \
-RECONCILER_CONTAINER=deploy-pairing-reconciler-1 \
+RELAY_CONTAINER=hrack-relay-1 \
+WEB_CONTAINER=hrack-web-1 \
+RECONCILER_CONTAINER=hrack-pairing-reconciler-1 \
 npm --prefix relay run verify:durable-recovery
 ```
 

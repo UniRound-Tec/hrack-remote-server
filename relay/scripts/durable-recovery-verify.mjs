@@ -17,6 +17,15 @@ function containerName(name) {
   return value
 }
 
+function optionalContainerName(name) {
+  const value = process.env[name]?.trim()
+  if (!value) return null
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value)) {
+    throw new Error(`${name} is not a safe Docker container name`)
+  }
+  return value
+}
+
 function assert(condition, message) {
   if (!condition) throw new Error(message)
 }
@@ -32,6 +41,7 @@ assert(Buffer.byteLength(serviceToken) >= 32, 'RELAY_SERVICE_TOKEN is too short'
 const relayContainer = containerName('RELAY_CONTAINER')
 const webContainer = containerName('WEB_CONTAINER')
 const reconcilerContainer = containerName('RECONCILER_CONTAINER')
+const edgeContainer = optionalContainerName('EDGE_CONTAINER')
 const recoveryTimeoutMs = Number(process.env.RECOVERY_TIMEOUT_MS ?? '15000')
 assert(
   Number.isSafeInteger(recoveryTimeoutMs) && recoveryTimeoutMs >= 1_000,
@@ -69,7 +79,12 @@ async function docker(args, input = '') {
 }
 
 async function ensureContainersExist() {
-  for (const name of [relayContainer, webContainer, reconcilerContainer]) {
+  for (const name of [
+    relayContainer,
+    webContainer,
+    reconcilerContainer,
+    edgeContainer
+  ].filter(Boolean)) {
     const resolved = await docker([
       'ps',
       '--filter',
@@ -79,6 +94,29 @@ async function ensureContainersExist() {
     ])
     assert(resolved === name, `required running container is missing: ${name}`)
   }
+}
+
+async function dockerLogs(name) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('docker', ['logs', name], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true
+    })
+    let output = ''
+    const timer = setTimeout(() => child.kill(), 30_000)
+    const append = (chunk) => {
+      output += chunk.toString()
+      if (output.length > 2_000_000) child.kill()
+    }
+    child.stdout.on('data', append)
+    child.stderr.on('data', append)
+    child.once('error', reject)
+    child.once('close', (code) => {
+      clearTimeout(timer)
+      if (code === 0) resolve(output)
+      else reject(new Error('docker logs failed'))
+    })
+  })
 }
 
 async function dbAction(action, payload = {}) {
@@ -362,6 +400,21 @@ function assertStoredIdentity(row, expected) {
   assert(row.status === 'active', 'stored pairing is not active')
 }
 
+async function verifySecretFreeLogs(markers) {
+  const containers = [
+    relayContainer,
+    webContainer,
+    reconcilerContainer,
+    edgeContainer
+  ].filter(Boolean)
+  for (const container of containers) {
+    const logs = await dockerLogs(container)
+    for (const marker of markers.filter(Boolean)) {
+      assert(!logs.includes(marker), `sensitive marker appeared in ${container} logs`)
+    }
+  }
+}
+
 async function restartAndRecover(roomId, containers) {
   const before = await relayState()
   await docker(['restart', ...containers])
@@ -387,7 +440,7 @@ async function restartAndRecover(roomId, containers) {
 const startedAt = Date.now()
 const userId = `p2-gate-${randomBytes(8).toString('hex')}`
 const pairingId = `pairing-${randomBytes(8).toString('hex')}`
-  let room
+let room
 let storedIdentity
 let seeded = false
 let deleted = false
@@ -471,6 +524,17 @@ try {
   assert((await roomStatus(room.roomId)) === 404, 'deleted account room was restored')
   await verifyUnavailable(room.roomId)
 
+  await verifySecretFreeLogs([
+    serviceToken,
+    userId,
+    pairingId,
+    `${userId}@example.test`,
+    room.roomId,
+    room.joinUrl,
+    room.revokeToken,
+    storedIdentity.revokeTokenEnc
+  ])
+
   process.stdout.write(
     `${JSON.stringify({
       result: 'passed',
@@ -488,7 +552,8 @@ try {
         'bidirectional-websocket-after-restart',
         'ban-removes-room',
         'unban-restores-same-url',
-        'account-delete-does-not-resurrect'
+        'account-delete-does-not-resurrect',
+        'secret-free-container-logs'
       ],
       elapsedMs: Date.now() - startedAt
     })}\n`

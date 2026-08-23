@@ -1,7 +1,17 @@
 node_modules/
 dist/
 web/dist-reconciler/
-docs/
+# 平台主线规格和部署证据入库；其余本地研究文档继续忽略。
+docs/*
+!docs/DEPLOYMENT.md
+!docs/PAIRING-PLATFORM-SPEC.md
+!docs/PAIRING-P2-DURABLE-RELAY-SPEC.md
+!docs/PAIRING-P3-DASHBOARD-SPEC.md
+!docs/PAIRING-P4-DEPLOYMENT-SPEC.md
+!docs/VALIDATION.md
+!docs/adr/
+docs/adr/*
+!docs/adr/0001-pairing-records-own-durable-identity.md
 playwright-report/
 test-results/
 .env

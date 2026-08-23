@@ -1,0 +1,25 @@
+# P4 隔离式真实门禁覆盖层。不要作为公网部署配置使用。
+# 由 `npm run verify:p4-deployment` 自动提供随机端口、随机密钥与项目名。
+
+services:
+  relay:
+    environment:
+      ALLOW_INSECURE_LOOPBACK: "1"
+    ports:
+      - "127.0.0.1:${VERIFY_RELAY_PORT:?set by P4 gate}:3000"
+
+  nginx-verify:
+    image: nginx:1.27-bookworm
+    profiles:
+      - verify
+    depends_on:
+      relay:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${VERIFY_EDGE_PORT:?set by P4 gate}:80"
+    volumes:
+      - ./nginx.verify.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx.routes.conf:/etc/nginx/hrack.routes.conf:ro
+    restart: "no"

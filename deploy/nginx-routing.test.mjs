@@ -2,11 +2,21 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import test from 'node:test'
 
-const config = fs
+const edgeConfig = fs
   .readFileSync(new URL('./nginx.hrack.conf.example', import.meta.url), 'utf8')
+  .replace(/^\s*#.*$/gm, '')
+const verifyConfig = fs
+  .readFileSync(new URL('./nginx.verify.conf', import.meta.url), 'utf8')
+  .replace(/^\s*#.*$/gm, '')
+const routes = fs
+  .readFileSync(new URL('./nginx.routes.conf', import.meta.url), 'utf8')
   .replace(/^\s*#.*$/gm, '')
 const compose = fs.readFileSync(
   new URL('./docker-compose.yml', import.meta.url),
+  'utf8'
+)
+const verifyCompose = fs.readFileSync(
+  new URL('./docker-compose.verify.yml', import.meta.url),
   'utf8'
 )
 
@@ -16,7 +26,7 @@ function escapeRegExp(value) {
 
 function locationBody(modifier, path) {
   const prefix = modifier ? `${escapeRegExp(modifier)}\\s+` : ''
-  const match = config.match(
+  const match = routes.match(
     new RegExp(`location\\s+${prefix}${escapeRegExp(path)}\\s*\\{([^{}]*)\\}`)
   )
   assert.ok(match, `missing location ${modifier} ${path}`.trim())
@@ -24,7 +34,27 @@ function locationBody(modifier, path) {
 }
 
 test('keeps the platform root separate from public pairing routes', () => {
-  assert.match(config, /absolute_redirect\s+off;/)
+  assert.match(edgeConfig, /absolute_redirect\s+off;/)
+  assert.match(
+    edgeConfig,
+    /include\s+\/etc\/nginx\/hrack\.routes\.conf;/
+  )
+  assert.match(
+    verifyConfig,
+    /include\s+\/etc\/nginx\/hrack\.routes\.conf;/
+  )
+  for (const [modifier, path] of [
+    ['=', '/remote'],
+    ['=', '/remote/'],
+    ['=', '/remote/v1/system'],
+    ['^~', '/remote/v1/system/'],
+    ['=', '/remote/demo'],
+    ['^~', '/remote/demo/'],
+    ['', '/remote/']
+  ]) {
+    assert.match(locationBody(modifier, path), /access_log\s+off;/)
+  }
+
   assert.match(locationBody('=', '/remote'), /return\s+307\s+\/dashboard;/)
   assert.match(locationBody('=', '/remote/'), /return\s+307\s+\/dashboard;/)
 
@@ -61,5 +91,28 @@ test('does not apply the Web server healthcheck to the reconciler process', () =
   assert.match(
     service[1],
     /^      BETTER_AUTH_URL: \$\{PUBLIC_ORIGIN:\?set in \.env\}\s*$/m
+  )
+})
+
+test('mounts one shared route policy in production and the local P4 gate', () => {
+  assert.match(
+    compose,
+    /^      - \.\/nginx\.routes\.conf:\/etc\/nginx\/hrack\.routes\.conf:ro\s*$/m
+  )
+  assert.match(
+    verifyCompose,
+    /^      ALLOW_INSECURE_LOOPBACK: "1"\s*$/m
+  )
+  assert.match(
+    verifyCompose,
+    /127\.0\.0\.1:\$\{VERIFY_RELAY_PORT:\?set by P4 gate\}:3000/
+  )
+  assert.match(
+    verifyCompose,
+    /127\.0\.0\.1:\$\{VERIFY_EDGE_PORT:\?set by P4 gate\}:80/
+  )
+  assert.match(
+    verifyCompose,
+    /^      - \.\/nginx\.routes\.conf:\/etc\/nginx\/hrack\.routes\.conf:ro\s*$/m
   )
 })
