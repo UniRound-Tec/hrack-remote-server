@@ -112,6 +112,62 @@ export const ja = {
       generic: 'アカウントサービスを一時的に利用できません。'
     }
   },
+  dashboard: {
+    eyebrow: 'remote',
+    title: 'リモートペアリング',
+    lead: 'アカウントごとに安定した URL が 1 つ。再読み込みやサービス再起動でも変わりません。',
+    account: '現在のアカウント',
+    admin: '運用コンソール',
+    signOut: 'ログアウト',
+    status: { ready: '利用可能', recovering: '復旧中', stale: 'ローテーションが必要' },
+    empty: {
+      title: 'リモート入口を作成',
+      lead: 'スマートフォンや別の端末で開けます。明示的にローテーションしたときだけ URL が変わります。',
+      create: 'ペアリング URL を作成',
+      creating: '作成中…'
+    },
+    active: {
+      title: 'ペアリング URL',
+      lead: 'コピーするか QR コードを読み取り、別の端末で開いてください。',
+      urlLabel: 'ペアリング URL',
+      createdAt: '作成日時',
+      copy: 'コピー',
+      copied: 'コピー済み',
+      copyFailed: '自動コピーに失敗しました。URL を選択して手動でコピーしてください。',
+      rotate: 'URL をローテーション',
+      rotating: 'ローテーション中…',
+      revoke: 'URL を無効化',
+      revoking: '無効化中…',
+      recovering: 'Relay がこの永続 URL を復旧しています。再作成は不要です。'
+    },
+    stale: {
+      title: 'このペアリング記録は復旧できません',
+      lead: '安全のため互換性のない URL は非表示です。明示的なローテーションで新しい URL を作成します。',
+      rotate: 'ペアリング URL をローテーション'
+    },
+    confirm: {
+      rotateTitle: 'ペアリング URL をローテーションしますか？',
+      rotateBody: '保存済みの古い URL はすべて永久に無効になり、新しい URL がすぐに作成されます。',
+      rotate: 'ローテーション',
+      revokeTitle: 'ペアリング URL を無効化しますか？',
+      revokeBody: '古い URL は永久に無効になります。今後リモート接続するには再作成が必要です。',
+      revoke: '無効化',
+      cancel: 'キャンセル'
+    },
+    errors: {
+      RELAY_UNAVAILABLE: 'Relay は一時的に利用できません。しばらくしてから再試行してください。',
+      RELAY_CAPACITY: '現在、利用できるリモートペアリング枠がありません。',
+      PAIRING_CREATE_FAILED: 'ペアリング URL を作成できませんでした。再試行してください。',
+      PAIRING_REVOKE_FAILED: '古い URL の無効化を確認できなかったため、記録は変更していません。',
+      PAIRING_CHANGED: '別の場所でペアリングが変更されました。表示を更新しました。',
+      PAIRING_STALE: 'ペアリング記録のローテーションが必要です。',
+      INVALID_REQUEST: 'リクエストが無効です。更新して再試行してください。',
+      UNAUTHORIZED: 'セッションが切れました。再度ログインしてください。',
+      INTERNAL_ERROR: '操作を完了できませんでした。しばらくしてから再試行してください。'
+    },
+    qrAlt: 'ペアリング URL の QR コード',
+    refresh: '状態を更新'
+  },
   admin: {
     eyebrow: 'operator',
     navigation: '運用コンソールのナビゲーション',

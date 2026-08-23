@@ -112,6 +112,62 @@ export const zhTW = {
       generic: '帳號服務暫時無法使用，請稍後再試。'
     }
   },
+  dashboard: {
+    eyebrow: 'remote',
+    title: '遠端配對',
+    lead: '每個帳號一條穩定 URL。重新整理頁面或重啟服務，網址都不會改變。',
+    account: '目前帳號',
+    admin: '營運後台',
+    signOut: '登出',
+    status: { ready: '可用', recovering: '正在恢復', stale: '需要輪換' },
+    empty: {
+      title: '建立你的遠端入口',
+      lead: '產生後可在手機或另一台裝置開啟。只有你明確輪換時 URL 才會改變。',
+      create: '建立配對 URL',
+      creating: '正在建立…'
+    },
+    active: {
+      title: '你的配對 URL',
+      lead: '複製或掃描 QR code，在另一台裝置上開啟。',
+      urlLabel: '配對 URL',
+      createdAt: '建立於',
+      copy: '複製',
+      copied: '已複製',
+      copyFailed: '無法自動複製，請選取 URL 手動複製。',
+      rotate: '輪換 URL',
+      rotating: '正在輪換…',
+      revoke: '撤銷 URL',
+      revoking: '正在撤銷…',
+      recovering: 'Relay 正在恢復這條持久 URL，不需要重新建立。'
+    },
+    stale: {
+      title: '這條配對記錄無法恢復',
+      lead: '基於安全考量，已隱藏不相容的網址。明確輪換會建立一條新 URL。',
+      rotate: '輪換配對 URL'
+    },
+    confirm: {
+      rotateTitle: '輪換配對 URL？',
+      rotateBody: '所有已儲存的舊網址會永久失效，並立即產生一條新網址。',
+      rotate: '確認輪換',
+      revokeTitle: '撤銷配對 URL？',
+      revokeBody: '舊網址會永久失效。之後如需遠端存取，必須重新建立。',
+      revoke: '確認撤銷',
+      cancel: '取消'
+    },
+    errors: {
+      RELAY_UNAVAILABLE: 'Relay 暫時無法使用，請稍後再試。',
+      RELAY_CAPACITY: '目前沒有可用的遠端配對名額。',
+      PAIRING_CREATE_FAILED: '無法建立配對 URL，請稍後再試。',
+      PAIRING_REVOKE_FAILED: '無法確認舊 URL 已失效，記錄維持不變。',
+      PAIRING_CHANGED: '配對已在其他位置變更，頁面已更新。',
+      PAIRING_STALE: '配對記錄需要輪換。',
+      INVALID_REQUEST: '請求已失效，請重新整理後再試。',
+      UNAUTHORIZED: '登入已失效，請重新登入。',
+      INTERNAL_ERROR: '暫時無法完成操作，請稍後再試。'
+    },
+    qrAlt: '配對 URL 的 QR code',
+    refresh: '更新狀態'
+  },
   admin: {
     eyebrow: 'operator',
     navigation: '營運後台導覽',

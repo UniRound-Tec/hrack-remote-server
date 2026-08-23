@@ -490,7 +490,10 @@ describe('account pairing lifecycle', () => {
     relay.failNextReconcile(500)
 
     const created = await createUserPairing('account-id')
-    expect(created).toMatchObject({ joinUrl: JOIN_URL })
+    expect(created).toMatchObject({
+      kind: 'recovering',
+      joinUrl: JOIN_URL
+    })
 
     closeDb()
     relay.restart()
@@ -653,7 +656,7 @@ describe('account pairing lifecycle', () => {
 
     const rotated = await rotateUserPairing('account-id', original.version)
     expect(rotated).toMatchObject({
-      kind: 'ready',
+      kind: 'recovering',
       joinUrl: SECOND_JOIN_URL
     })
 
@@ -747,6 +750,15 @@ describe('account pairing lifecycle', () => {
     await expect(actions.create()).resolves.toEqual({
       ok: false,
       error: 'INTERNAL_ERROR'
+    })
+  })
+
+  it('checks the session before reporting invalid action input', async () => {
+    const actions = createPairingActionService(async () => null)
+
+    await expect(actions.rotate({ unexpected: true })).resolves.toEqual({
+      ok: false,
+      error: 'UNAUTHORIZED'
     })
   })
 })

@@ -112,6 +112,62 @@ export const ko = {
       generic: '계정 서비스를 일시적으로 사용할 수 없습니다.'
     }
   },
+  dashboard: {
+    eyebrow: 'remote',
+    title: '원격 페어링',
+    lead: '계정마다 안정적인 URL 하나를 사용합니다. 새로고침하거나 서비스를 다시 시작해도 바뀌지 않습니다.',
+    account: '현재 계정',
+    admin: '운영 콘솔',
+    signOut: '로그아웃',
+    status: { ready: '사용 가능', recovering: '복구 중', stale: '교체 필요' },
+    empty: {
+      title: '원격 진입점 만들기',
+      lead: '휴대폰이나 다른 기기에서 열 수 있습니다. 명시적으로 교체할 때만 URL이 바뀝니다.',
+      create: '페어링 URL 만들기',
+      creating: '만드는 중…'
+    },
+    active: {
+      title: '페어링 URL',
+      lead: '복사하거나 QR 코드를 스캔해 다른 기기에서 여세요.',
+      urlLabel: '페어링 URL',
+      createdAt: '생성 시각',
+      copy: '복사',
+      copied: '복사됨',
+      copyFailed: '자동 복사에 실패했습니다. URL을 선택해 직접 복사하세요.',
+      rotate: 'URL 교체',
+      rotating: '교체 중…',
+      revoke: 'URL 폐기',
+      revoking: '폐기 중…',
+      recovering: 'Relay가 이 영구 URL을 복구하고 있습니다. 다시 만들 필요가 없습니다.'
+    },
+    stale: {
+      title: '이 페어링 기록을 복구할 수 없습니다',
+      lead: '안전을 위해 호환되지 않는 주소를 숨겼습니다. 명시적으로 교체하면 새 URL을 만듭니다.',
+      rotate: '페어링 URL 교체'
+    },
+    confirm: {
+      rotateTitle: '페어링 URL을 교체할까요?',
+      rotateBody: '저장된 모든 이전 URL은 영구적으로 작동하지 않으며 새 URL이 즉시 생성됩니다.',
+      rotate: 'URL 교체',
+      revokeTitle: '페어링 URL을 폐기할까요?',
+      revokeBody: '이전 URL은 영구적으로 작동하지 않습니다. 이후 원격 접속에는 새 URL이 필요합니다.',
+      revoke: 'URL 폐기',
+      cancel: '취소'
+    },
+    errors: {
+      RELAY_UNAVAILABLE: 'Relay를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도하세요.',
+      RELAY_CAPACITY: '현재 사용할 수 있는 원격 페어링 공간이 없습니다.',
+      PAIRING_CREATE_FAILED: '페어링 URL을 만들 수 없습니다. 다시 시도하세요.',
+      PAIRING_REVOKE_FAILED: '이전 URL의 비활성화를 확인하지 못해 기록을 변경하지 않았습니다.',
+      PAIRING_CHANGED: '다른 곳에서 페어링이 변경되어 화면을 갱신했습니다.',
+      PAIRING_STALE: '페어링 기록을 교체해야 합니다.',
+      INVALID_REQUEST: '요청이 더 이상 유효하지 않습니다. 새로고침 후 다시 시도하세요.',
+      UNAUTHORIZED: '세션이 만료되었습니다. 다시 로그인하세요.',
+      INTERNAL_ERROR: '작업을 완료할 수 없습니다. 잠시 후 다시 시도하세요.'
+    },
+    qrAlt: '페어링 URL QR 코드',
+    refresh: '상태 새로고침'
+  },
   admin: {
     eyebrow: 'operator',
     navigation: '운영 콘솔 탐색',

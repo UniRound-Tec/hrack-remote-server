@@ -28,6 +28,8 @@ export interface PairingActionService {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+class InvalidPairingActionInput extends Error {}
+
 function parseVersionInput(value: unknown): string | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return undefined
@@ -43,6 +45,12 @@ function parseVersionInput(value: unknown): string | undefined {
     : undefined
 }
 
+function safeActionError(error: unknown): PairingActionError {
+  if (error instanceof InvalidPairingActionInput) return 'INVALID_REQUEST'
+  if (error instanceof PairingLifecycleError) return error.code
+  return 'INTERNAL_ERROR'
+}
+
 export function createPairingActionService(
   resolveSessionUserId: () => Promise<string | null>
 ): PairingActionService {
@@ -56,10 +64,7 @@ export function createPairingActionService(
     } catch (error) {
       return {
         ok: false,
-        error:
-          error instanceof PairingLifecycleError
-            ? error.code
-            : 'INTERNAL_ERROR'
+        error: safeActionError(error)
       }
     }
   }
@@ -67,17 +72,17 @@ export function createPairingActionService(
   return {
     get: () => run(getUserPairing),
     create: () => run(createUserPairing),
-    revoke: (input) => {
-      const version = parseVersionInput(input)
-      return version
-        ? run((userId) => revokeUserPairing(userId, version))
-        : Promise.resolve({ ok: false, error: 'INVALID_REQUEST' })
-    },
-    rotate: (input) => {
-      const version = parseVersionInput(input)
-      return version
-        ? run((userId) => rotateUserPairing(userId, version))
-        : Promise.resolve({ ok: false, error: 'INVALID_REQUEST' })
-    }
+    revoke: (input) =>
+      run((userId) => {
+        const version = parseVersionInput(input)
+        if (!version) throw new InvalidPairingActionInput()
+        return revokeUserPairing(userId, version)
+      }),
+    rotate: (input) =>
+      run((userId) => {
+        const version = parseVersionInput(input)
+        if (!version) throw new InvalidPairingActionInput()
+        return rotateUserPairing(userId, version)
+      })
   }
 }

@@ -115,6 +115,62 @@ export const zhCN = {
       generic: '账号服务暂不可用，请稍后再试。'
     }
   },
+  dashboard: {
+    eyebrow: 'remote',
+    title: '远程配对',
+    lead: '每个账号一条稳定 URL。刷新页面或重启服务，地址都不会改变。',
+    account: '当前账号',
+    admin: '运营后台',
+    signOut: '退出登录',
+    status: { ready: '可用', recovering: '正在恢复', stale: '需要轮换' },
+    empty: {
+      title: '创建你的远程入口',
+      lead: '生成后可在手机或另一台设备打开。只有你显式轮换时 URL 才会改变。',
+      create: '创建配对 URL',
+      creating: '正在创建…'
+    },
+    active: {
+      title: '你的配对 URL',
+      lead: '复制或扫描二维码，在另一台设备上打开。',
+      urlLabel: '配对 URL',
+      createdAt: '创建于',
+      copy: '复制',
+      copied: '已复制',
+      copyFailed: '无法自动复制，请选中 URL 手动复制。',
+      rotate: '轮换 URL',
+      rotating: '正在轮换…',
+      revoke: '吊销 URL',
+      revoking: '正在吊销…',
+      recovering: 'Relay 正在恢复这条持久 URL，无需重新创建。'
+    },
+    stale: {
+      title: '这条配对记录无法恢复',
+      lead: '出于安全考虑，已隐藏不兼容的地址。显式轮换会创建一条新 URL。',
+      rotate: '轮换配对 URL'
+    },
+    confirm: {
+      rotateTitle: '轮换配对 URL？',
+      rotateBody: '所有已保存的旧地址会永久失效，并立即生成一条新地址。',
+      rotate: '确认轮换',
+      revokeTitle: '吊销配对 URL？',
+      revokeBody: '旧地址会永久失效。之后如需远程访问，必须重新创建。',
+      revoke: '确认吊销',
+      cancel: '取消'
+    },
+    errors: {
+      RELAY_UNAVAILABLE: 'Relay 暂时不可用，请稍后重试。',
+      RELAY_CAPACITY: '当前没有可用的远程配对名额。',
+      PAIRING_CREATE_FAILED: '无法创建配对 URL，请稍后重试。',
+      PAIRING_REVOKE_FAILED: '无法确认旧 URL 已失效，记录保持不变。',
+      PAIRING_CHANGED: '配对已在另一处改变，页面已刷新。',
+      PAIRING_STALE: '配对记录需要轮换。',
+      INVALID_REQUEST: '请求已失效，请刷新页面后重试。',
+      UNAUTHORIZED: '登录已失效，请重新登录。',
+      INTERNAL_ERROR: '暂时无法完成操作，请稍后重试。'
+    },
+    qrAlt: '配对 URL 二维码',
+    refresh: '刷新状态'
+  },
   admin: {
     eyebrow: 'operator',
     navigation: '运营后台导航',

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { and, desc, eq, or } from 'drizzle-orm'
 import { getDb } from '../db'
-import { pairings } from '../db/schema'
+import { pairingProjectionState, pairings } from '../db/schema'
 import {
   loadPairingReconcilerConfig,
   reconcilePairingsOnce
@@ -50,6 +50,7 @@ export type PairingLifecycleErrorCode =
   | 'PAIRING_CREATE_FAILED'
   | 'PAIRING_REVOKE_FAILED'
   | 'PAIRING_CHANGED'
+  | 'PAIRING_STALE'
 
 export class PairingLifecycleError extends Error {
   override readonly name = 'PairingLifecycleError'
@@ -196,7 +197,8 @@ function isUniqueConstraint(error: unknown): boolean {
 
 async function roomIsReady(
   config: LifecycleConfig,
-  roomId: string
+  roomId: string,
+  requiredRevision: number
 ): Promise<boolean> {
   try {
     const headers = {
@@ -208,6 +210,7 @@ async function roomIsReady(
     )
     if (state.status !== 200 || !isRelayState(state.value)) return false
     if (!state.value.synchronized) return false
+    if (state.value.appliedRevision !== requiredRevision) return false
     const room = await fetch(
       `${config.relayOrigin}/remote/v1/rooms/${encodeURIComponent(roomId)}`,
       { headers, signal: AbortSignal.timeout(5_000) }
@@ -268,8 +271,15 @@ export async function getUserPairing(userId: string): Promise<PairingView> {
     return { kind: 'stale', version: row.id, createdAt: row.createdAt }
   }
 
+  const projection = database
+    .select({ revision: pairingProjectionState.revision })
+    .from(pairingProjectionState)
+    .where(eq(pairingProjectionState.singleton, 1))
+    .get()
+  if (!projection) throw new Error('pairing projection state is missing')
+
   return {
-    kind: (await roomIsReady(config, row.roomId))
+    kind: (await roomIsReady(config, row.roomId, projection.revision))
       ? 'ready'
       : 'recovering',
     version: row.id,

@@ -113,6 +113,62 @@ export const en = {
       generic: 'The account service is temporarily unavailable. Try again later.'
     }
   },
+  dashboard: {
+    eyebrow: 'remote',
+    title: 'Remote pairing',
+    lead: 'One stable URL per account. Refreshes and service restarts never change it.',
+    account: 'Current account',
+    admin: 'Operator console',
+    signOut: 'Sign out',
+    status: { ready: 'Ready', recovering: 'Recovering', stale: 'Rotation required' },
+    empty: {
+      title: 'Create your remote entry point',
+      lead: 'Open it on a phone or another device. The URL changes only when you explicitly rotate it.',
+      create: 'Create pairing URL',
+      creating: 'Creating…'
+    },
+    active: {
+      title: 'Your pairing URL',
+      lead: 'Copy it or scan the QR code to open it on another device.',
+      urlLabel: 'Pairing URL',
+      createdAt: 'Created',
+      copy: 'Copy',
+      copied: 'Copied',
+      copyFailed: 'Automatic copy failed. Select the URL and copy it manually.',
+      rotate: 'Rotate URL',
+      rotating: 'Rotating…',
+      revoke: 'Revoke URL',
+      revoking: 'Revoking…',
+      recovering: 'Relay is restoring this persistent URL. You do not need to create another one.'
+    },
+    stale: {
+      title: 'This pairing record cannot be restored',
+      lead: 'The incompatible address is hidden for safety. An explicit rotation creates a new URL.',
+      rotate: 'Rotate pairing URL'
+    },
+    confirm: {
+      rotateTitle: 'Rotate the pairing URL?',
+      rotateBody: 'Every saved copy of the old URL will stop working permanently, and a new URL will be created now.',
+      rotate: 'Rotate URL',
+      revokeTitle: 'Revoke the pairing URL?',
+      revokeBody: 'The old URL will stop working permanently. You must create another one for future remote access.',
+      revoke: 'Revoke URL',
+      cancel: 'Cancel'
+    },
+    errors: {
+      RELAY_UNAVAILABLE: 'Relay is temporarily unavailable. Try again shortly.',
+      RELAY_CAPACITY: 'No remote pairing capacity is currently available.',
+      PAIRING_CREATE_FAILED: 'The pairing URL could not be created. Try again.',
+      PAIRING_REVOKE_FAILED: 'The old URL could not be confirmed inactive, so your record was left unchanged.',
+      PAIRING_CHANGED: 'The pairing changed elsewhere. The view has been refreshed.',
+      PAIRING_STALE: 'The pairing record must be rotated.',
+      INVALID_REQUEST: 'This request is no longer valid. Refresh and try again.',
+      UNAUTHORIZED: 'Your session has expired. Sign in again.',
+      INTERNAL_ERROR: 'The operation could not be completed. Try again shortly.'
+    },
+    qrAlt: 'QR code for the pairing URL',
+    refresh: 'Refresh status'
+  },
   admin: {
     eyebrow: 'operator',
     navigation: 'Operator navigation',
