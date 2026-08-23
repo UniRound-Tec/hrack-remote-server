@@ -138,9 +138,17 @@ token、Cookie 或协议 payload。
 `/remote/` 整段关闭 access log，因为 URL 路径包含 roomId。认证、管理与 dashboard 路径
 同样关闭 access log。不要在 CDN、WAF 或上层负载均衡重新记录完整 `/remote/*` 请求 URI。
 
-不用 Compose 自带 Nginx 时，只启动无 profile 的三个服务，并由宿主反代复刻相同策略。
-这时需要用只绑定 loopback 的 Compose override 显式发布 Web/Relay 端口；不要把 3000
-直接暴露到公网。内部 `/remote/v1/system/*` 永远不得由宿主反代公开。
+已有 1Panel/OpenResty/Caddy 终止 TLS 时，使用仓库内的宿主反代模式：
+
+```sh
+docker compose --profile host-edge up -d --build --wait
+```
+
+`host-edge` 仍复用 `nginx.routes.conf`，只在 `127.0.0.1:${HOST_EDGE_PORT:-8788}` 暴露一个
+HTTP 端口。宿主反代把整个站点转到该端口，并传递 `Host`、`X-Forwarded-Proto`、
+`X-Real-IP` 和 WebSocket Upgrade；不要分别手抄 Web/Relay 路由，也不要把容器 3000/3001
+端口直接暴露。`host-edge` 会保留外层 HTTPS 信息，因此 Secure Cookie 和回跳 origin 不会
+被内层 HTTP 连接降级。内部 `/remote/v1/system/*` 始终由共用路由返回 404。
 
 ## 7. 备份
 

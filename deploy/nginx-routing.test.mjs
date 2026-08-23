@@ -79,6 +79,7 @@ test('preserves the complete browser authority for Next Server Actions', () => {
     const web = locationBody(modifier, path)
     assert.match(web, /proxy_set_header\s+Host\s+\$http_host;/)
     assert.match(web, /proxy_set_header\s+X-Forwarded-Host\s+\$http_host;/)
+    assert.match(web, /proxy_set_header\s+X-Forwarded-Proto\s+\$forwarded_proto;/)
   }
 })
 
@@ -100,6 +101,10 @@ test('mounts one shared route policy in production and the local P4 gate', () =>
   assert.match(
     compose,
     /^      - \.\/nginx\.routes\.conf:\/etc\/nginx\/hrack\.routes\.conf:ro\s*$/m
+  )
+  assert.match(
+    compose,
+    /^      - \.\/nginx\.host-edge\.conf:\/etc\/nginx\/conf\.d\/default\.conf:ro\s*$/m
   )
   assert.match(
     verifyCompose,

@@ -10,6 +10,17 @@ map $http_upgrade $connection_upgrade {
     ''      close;
 }
 
+# 直接终止 TLS 时没有上游转发头，回退到当前连接信息。
+map $http_x_forwarded_proto $forwarded_proto {
+    default $http_x_forwarded_proto;
+    ''      $scheme;
+}
+
+map $http_x_real_ip $forwarded_real_ip {
+    default $http_x_real_ip;
+    ''      $remote_addr;
+}
+
 server {
     listen 80;
     server_name _;
