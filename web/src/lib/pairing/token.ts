@@ -2,6 +2,10 @@ import { decodeKey, open, PAIRING_REVOKE_AAD, seal } from '../crypto/secretbox'
 
 const PREFIX = 'v1'
 
+export class PairingTokenFormatError extends Error {
+  override readonly name = 'PairingTokenFormatError'
+}
+
 function key(): Buffer {
   const value = process.env.PAIRING_ENC_KEY
   if (!value) throw new Error('PAIRING_ENC_KEY is required')
@@ -24,7 +28,7 @@ export function sealPairingRevokeToken(token: string): string {
 export function openPairingRevokeToken(value: string): string {
   const [version, nonce, ciphertext, extra] = value.split('.')
   if (version !== PREFIX || !nonce || !ciphertext || extra !== undefined) {
-    throw new Error('Unsupported pairing token format')
+    throw new PairingTokenFormatError('Unsupported pairing token format')
   }
   return open(
     Buffer.from(ciphertext, 'base64url'),

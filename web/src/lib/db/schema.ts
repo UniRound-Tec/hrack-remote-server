@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import {
   blob,
+  check,
   integer,
   sqliteTable,
   text,
@@ -39,6 +40,18 @@ export const otpSendGuard = sqliteTable('otp_send_guard', {
   lastAttemptAt: integer('last_attempt_at').notNull(),
   lastOkAt: integer('last_ok_at')
 })
+
+/** Monotonic version of the account-owned desired Relay room set. */
+export const pairingProjectionState = sqliteTable(
+  'pairing_projection_state',
+  {
+    singleton: integer('singleton').primaryKey(),
+    revision: integer('revision').notNull()
+  },
+  (table) => [
+    check('pairing_projection_singleton_check', sql`${table.singleton} = 1`)
+  ]
+)
 
 /** One active remote pairing per authenticated user. CRUD lands in pairing P3. */
 export const pairings = sqliteTable(

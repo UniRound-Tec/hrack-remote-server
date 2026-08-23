@@ -15,6 +15,13 @@
       "when": 1787419114957,
       "tag": "0001_dapper_marvel_boy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787472588210,
+      "tag": "0002_natural_swordsman",
+      "breakpoints": true
     }
   ]
 }
