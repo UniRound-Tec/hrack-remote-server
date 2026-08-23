@@ -81,6 +81,7 @@ services:
       - dist-reconciler/scripts/pairing-reconciler.js
     environment:
       HRACK_WEB_DATA: /app/data
+      BETTER_AUTH_URL: ${PUBLIC_ORIGIN:?set in .env}
       RELAY_INTERNAL_ORIGIN: http://relay:3000
       RELAY_SERVICE_TOKEN: ${RELAY_SERVICE_TOKEN:?set in .env}
       PAIRING_ENC_KEY: ${PAIRING_ENC_KEY:?set in .env}

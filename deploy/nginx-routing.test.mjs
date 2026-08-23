@@ -39,10 +39,27 @@ test('keeps the platform root separate from public pairing routes', () => {
   assert.match(relay, /proxy_set_header\s+Connection\s+\$connection_upgrade;/)
 })
 
+test('preserves the complete browser authority for Next Server Actions', () => {
+  for (const [modifier, path] of [
+    ['', '/'],
+    ['^~', '/api/auth/'],
+    ['=', '/dashboard'],
+    ['^~', '/dashboard/']
+  ]) {
+    const web = locationBody(modifier, path)
+    assert.match(web, /proxy_set_header\s+Host\s+\$http_host;/)
+    assert.match(web, /proxy_set_header\s+X-Forwarded-Host\s+\$http_host;/)
+  }
+})
+
 test('does not apply the Web server healthcheck to the reconciler process', () => {
   const service = compose.match(
     /^  pairing-reconciler:\s*$([\s\S]*?)(?=^  [a-z][\w-]*:\s*$)/m
   )
   assert.ok(service, 'missing pairing-reconciler service')
   assert.match(service[1], /^    healthcheck:\s*\r?\n      disable: true\s*$/m)
+  assert.match(
+    service[1],
+    /^      BETTER_AUTH_URL: \$\{PUBLIC_ORIGIN:\?set in \.env\}\s*$/m
+  )
 })
