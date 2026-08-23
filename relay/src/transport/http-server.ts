@@ -11,7 +11,11 @@ import { extname, resolve, sep } from 'node:path'
 
 import WebSocket, { WebSocketServer, type RawData } from 'ws'
 
-import { RelayCore, type RelayEffect } from '../relay/RelayCore.js'
+import {
+  RelayCore,
+  type DesiredRoom,
+  type RelayEffect
+} from '../relay/RelayCore.js'
 import type { RelayConfig } from '../relay/relay-config.js'
 
 export interface SafeLogRecord {
@@ -91,17 +95,48 @@ function bearerToken(request: IncomingMessage): string | null {
   return token.length > 0 ? token : null
 }
 
-function serviceTokenMatches(actual: string | null, expected: string | null): boolean {
+async function readJsonValue(
+  request: IncomingMessage,
+  maxBytes: number
+): Promise<unknown> {
+  const chunks: Buffer[] = []
+  let length = 0
+  for await (const chunk of request) {
+    const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    length += value.byteLength
+    if (length > maxBytes) throw new Error('body-too-large')
+    chunks.push(value)
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown
+}
+
+function serviceTokenMatches(
+  actual: string | null,
+  expected: string | null
+): boolean {
   if (actual === null || expected === null) return false
   const actualDigest = createHash('sha256').update(actual).digest()
   const expectedDigest = createHash('sha256').update(expected).digest()
   return timingSafeEqual(actualDigest, expectedDigest)
 }
 
+function decodeBase64Url(value: unknown, bytes: number): Buffer | null {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)) return null
+  const decoded = Buffer.from(value, 'base64url')
+  if (decoded.byteLength !== bytes || decoded.toString('base64url') !== value) {
+    return null
+  }
+  return decoded
+}
+
 export function createRelayServer(options: RelayServerOptions): RunningRelayServer {
   const { config } = options
   const logger = options.logger ?? (() => {})
   const logSecret = Buffer.from(options.logSecret ?? systemRandomBytes(32))
+  const instanceId = systemRandomBytes(16).toString('base64url')
+  let synchronized = false
+  let appliedRevision = -1
+  let appliedSnapshotHash: string | null = null
   const sockets = new Map<string, WebSocket>()
   const drainTimers = new Set<NodeJS.Timeout>()
   const core = new RelayCore(config, {
@@ -239,6 +274,129 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
         return
       }
 
+      if (request.method === 'GET' && path === `${base}/v1/system/state`) {
+        if (!serviceTokenMatches(bearerToken(request), config.serviceToken)) {
+          empty(response, 401)
+          return
+        }
+        json(response, 200, { instanceId, synchronized, appliedRevision })
+        return
+      }
+
+      if (request.method === 'PUT' && path === `${base}/v1/system/rooms`) {
+        if (!serviceTokenMatches(bearerToken(request), config.serviceToken)) {
+          empty(response, 401)
+          return
+        }
+        if (!request.headers['content-type']?.toLowerCase().startsWith('application/json')) {
+          empty(response, 415)
+          return
+        }
+        const body = await readJsonValue(
+          request,
+          Math.max(1_024, config.maxRooms * 160)
+        )
+        if (
+          typeof body !== 'object' ||
+          body === null ||
+          Array.isArray(body)
+        ) {
+          empty(response, 400)
+          return
+        }
+        const bodyKeys = Object.keys(body).sort()
+        if (
+          bodyKeys.length !== 2 ||
+          bodyKeys[0] !== 'revision' ||
+          bodyKeys[1] !== 'rooms' ||
+          !('revision' in body) ||
+          !('rooms' in body) ||
+          !Number.isSafeInteger(body.revision) ||
+          Number(body.revision) < 0 ||
+          !Array.isArray(body.rooms)
+        ) {
+          empty(response, 400)
+          return
+        }
+        if (body.rooms.length > config.maxRooms) {
+          json(response, 503, { error: 'CAPACITY' })
+          return
+        }
+        const desiredRooms: DesiredRoom[] = []
+        const roomIds = new Set<string>()
+        for (const item of body.rooms) {
+          if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+            empty(response, 400)
+            return
+          }
+          const keys = Object.keys(item).sort()
+          if (
+            keys.length !== 2 ||
+            keys[0] !== 'revokeDigest' ||
+            keys[1] !== 'roomId' ||
+            !('roomId' in item) ||
+            !('revokeDigest' in item)
+          ) {
+            empty(response, 400)
+            return
+          }
+          const roomIdBytes = decodeBase64Url(item.roomId, 16)
+          const revokeDigest = decodeBase64Url(item.revokeDigest, 32)
+          if (
+            roomIdBytes === null ||
+            revokeDigest === null ||
+            typeof item.roomId !== 'string' ||
+            roomIds.has(item.roomId)
+          ) {
+            empty(response, 400)
+            return
+          }
+          roomIds.add(item.roomId)
+          desiredRooms.push({ roomId: item.roomId, revokeDigest })
+        }
+        desiredRooms.sort((left, right) =>
+          left.roomId.localeCompare(right.roomId)
+        )
+        const revision = Number(body.revision)
+        const snapshotHash = createHash('sha256')
+          .update(
+            JSON.stringify(
+              desiredRooms.map((room) => ({
+                roomId: room.roomId,
+                revokeDigest: room.revokeDigest.toString('base64url')
+              }))
+            )
+          )
+          .digest('base64url')
+        if (synchronized && revision < appliedRevision) {
+          json(response, 409, { error: 'STALE_REVISION' })
+          return
+        }
+        if (
+          synchronized &&
+          revision === appliedRevision &&
+          snapshotHash !== appliedSnapshotHash
+        ) {
+          json(response, 409, { error: 'REVISION_CONFLICT' })
+          return
+        }
+        const result = core.reconcileRooms(desiredRooms)
+        if (!result.ok) {
+          json(response, 409, { error: 'ROOM_CREDENTIAL_CONFLICT' })
+          return
+        }
+        execute(result.effects)
+        appliedRevision = revision
+        appliedSnapshotHash = snapshotHash
+        synchronized = true
+        json(response, 200, {
+          instanceId,
+          appliedRevision,
+          activeRoomCount: desiredRooms.length
+        })
+        return
+      }
+
       if (request.method === 'POST' && path === `${base}/v1/rooms`) {
         const serviceAuthenticated = serviceTokenMatches(
           bearerToken(request),
@@ -246,6 +404,11 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
         )
         if (!serviceAuthenticated && !config.enableDevCreate) {
           empty(response, 401)
+          return
+        }
+        if (serviceAuthenticated && !synchronized) {
+          response.writeHead(503, { ...NO_STORE, 'retry-after': '5' })
+          response.end()
           return
         }
         const origin = request.headers.origin
@@ -283,6 +446,23 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
         if (options.lifecycleLogs) {
           log({ event: 'room-create', result: 'created', ipKey: safeIpKey(request) })
         }
+        return
+      }
+
+      if (request.method === 'GET' && path.startsWith(roomApiPrefix)) {
+        if (!serviceTokenMatches(bearerToken(request), config.serviceToken)) {
+          empty(response, 401)
+          return
+        }
+        const roomId = decodeURIComponent(path.slice(roomApiPrefix.length))
+        if (
+          decodeBase64Url(roomId, 16) === null ||
+          core.roomAvailability(roomId) !== 'open'
+        ) {
+          empty(response, 404)
+          return
+        }
+        json(response, 200, { exists: true })
         return
       }
 
@@ -357,6 +537,11 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
         if (await serveAsset(response, relativePath)) return
         const roomId = decodeURIComponent(relativePath)
         if (roomId.length > 0 && !roomId.includes('/')) {
+          if (!synchronized && !config.enableDevCreate) {
+            response.writeHead(503, { ...NO_STORE, 'retry-after': '5' })
+            response.end()
+            return
+          }
           const available = core.roomAvailability(roomId) === 'open'
           await serveIndex(response, 'join', available)
           return
@@ -394,6 +579,10 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
   })
 
   webSocketServer.on('connection', (socket, request) => {
+    if (!synchronized && !config.enableDevCreate) {
+      socket.close(1013, 'restoring')
+      return
+    }
     const connectionId = systemRandomBytes(12).toString('base64url')
     sockets.set(connectionId, socket)
     execute(

@@ -122,6 +122,16 @@ describe('real HTTP and WebSocket server', () => {
     })
     expect(wrongCredential.status).toBe(401)
 
+    const initialSync = await fetch(`${origin}/v1/system/rooms`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${serviceToken}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({ revision: 0, rooms: [] })
+    })
+    expect(initialSync.status).toBe(200)
+
     const response = await fetch(`${origin}/v1/rooms`, {
       method: 'POST',
       headers: {
@@ -155,6 +165,378 @@ describe('real HTTP and WebSocket server', () => {
 
     expect((await fetch(`${origin}/`)).status).toBe(404)
     expect((await fetch(`${origin}/demo`)).status).toBe(404)
+  })
+
+  it('reports boot-specific relay state only to the service credential', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const serviceToken = 'system-state-service-token-is-32-bytes'
+    const server = createRelayServer({
+      config: defaultRelayConfig({
+        publicOrigin: origin,
+        allowInsecureLoopback: true,
+        serviceToken
+      })
+    })
+    running.push(server)
+    await server.listen(port, '127.0.0.1')
+
+    expect((await fetch(`${origin}/v1/system/state`)).status).toBe(401)
+
+    const response = await fetch(`${origin}/v1/system/state`, {
+      headers: { authorization: `Bearer ${serviceToken}` }
+    })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      instanceId: expect.stringMatching(/^[A-Za-z0-9_-]{22}$/),
+      synchronized: false,
+      appliedRevision: -1
+    })
+
+    const createBeforeSync = await fetch(`${origin}/v1/rooms`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${serviceToken}`,
+        'content-type': 'application/json'
+      },
+      body: '{}'
+    })
+    expect(createBeforeSync.status).toBe(503)
+    expect(createBeforeSync.headers.get('retry-after')).toBe('5')
+  })
+
+  it('keeps pairing pages and sockets unavailable until the first synchronization', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const serviceToken = 'fail-closed-service-token-is-32-bytes'
+    const server = createRelayServer({
+      config: defaultRelayConfig({
+        publicOrigin: origin,
+        allowInsecureLoopback: true,
+        serviceToken
+      })
+    })
+    running.push(server)
+    await server.listen(port, '127.0.0.1')
+
+    const page = await fetch(`${origin}/MDEyMzQ1Njc4OWFiY2RlZg`)
+    expect(page.status).toBe(503)
+    expect(page.headers.get('retry-after')).toBe('5')
+
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/v1/ws`)
+    const closeCode = await new Promise<number>((resolve, reject) => {
+      socket.once('close', (code) => resolve(code))
+      socket.once('error', reject)
+    })
+    expect(closeCode).toBe(1013)
+  })
+
+  it('accepts an authenticated empty desired state and opens service creation', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const serviceToken = 'desired-state-service-token-is-32-bytes'
+    const server = createRelayServer({
+      config: defaultRelayConfig({
+        publicOrigin: origin,
+        allowInsecureLoopback: true,
+        serviceToken
+      })
+    })
+    running.push(server)
+    await server.listen(port, '127.0.0.1')
+
+    const unauthorized = await fetch(`${origin}/v1/system/rooms`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ revision: 0, rooms: [] })
+    })
+    expect(unauthorized.status).toBe(401)
+
+    const reconciled = await fetch(`${origin}/v1/system/rooms`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${serviceToken}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({ revision: 0, rooms: [] })
+    })
+    expect(reconciled.status).toBe(200)
+    expect(await reconciled.json()).toEqual({
+      instanceId: expect.stringMatching(/^[A-Za-z0-9_-]{22}$/),
+      appliedRevision: 0,
+      activeRoomCount: 0
+    })
+
+    const created = await fetch(`${origin}/v1/rooms`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${serviceToken}`,
+        'content-type': 'application/json'
+      },
+      body: '{}'
+    })
+    expect(created.status).toBe(201)
+  })
+
+  it('restores a desired room that accepts its original pairing credential', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const serviceToken = 'restore-room-service-token-is-32-bytes'
+    const roomId = 'MDEyMzQ1Njc4OWFiY2RlZg'
+    const revokeToken = 'restore-token-fixed-32-byte-value!!'
+    const revokeDigest = 'wDndF3Q4aUcFtFV_Inz_HDGAIPBhhZjh-0nhwu1KHxs'
+    const server = createRelayServer({
+      config: defaultRelayConfig({
+        publicOrigin: origin,
+        allowInsecureLoopback: true,
+        serviceToken
+      })
+    })
+    running.push(server)
+    await server.listen(port, '127.0.0.1')
+
+    const reconciled = await fetch(`${origin}/v1/system/rooms`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${serviceToken}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        revision: 7,
+        rooms: [{ roomId, revokeDigest }]
+      })
+    })
+    expect(reconciled.status).toBe(200)
+    expect(await reconciled.json()).toMatchObject({
+      appliedRevision: 7,
+      activeRoomCount: 1
+    })
+
+    expect((await fetch(`${origin}/v1/rooms/${roomId}`)).status).toBe(401)
+    const availability = await fetch(`${origin}/v1/rooms/${roomId}`, {
+      headers: { authorization: `Bearer ${serviceToken}` }
+    })
+    expect(availability.status).toBe(200)
+    expect(await availability.json()).toEqual({ exists: true })
+    expect(
+      (
+        await fetch(`${origin}/v1/rooms/AAAAAAAAAAAAAAAAAAAAAA`, {
+          headers: { authorization: `Bearer ${serviceToken}` }
+        })
+      ).status
+    ).toBe(404)
+
+    const desktop = await RealClient.connect(`ws://127.0.0.1:${port}/v1/ws`)
+    desktop.send({ v: 1, type: 'hello', role: 'desktop', roomId })
+    expect(await desktop.next()).toMatchObject({ v: 1, type: 'hello-ok' })
+
+    const revoked = await fetch(`${origin}/v1/rooms/${roomId}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${revokeToken}` }
+    })
+    expect(revoked.status).toBe(204)
+    expect(await desktop.next()).toEqual({ v: 1, type: 'revoked' })
+  })
+
+  it('rejects stale and conflicting snapshots without changing the desired room', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const serviceToken = 'revision-check-service-token-is-32-bytes'
+    const room = {
+      roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
+      revokeDigest: 'wDndF3Q4aUcFtFV_Inz_HDGAIPBhhZjh-0nhwu1KHxs'
+    }
+    const server = createRelayServer({
+      config: defaultRelayConfig({
+        publicOrigin: origin,
+        allowInsecureLoopback: true,
+        serviceToken
+      })
+    })
+    running.push(server)
+    await server.listen(port, '127.0.0.1')
+    const headers = {
+      authorization: `Bearer ${serviceToken}`,
+      'content-type': 'application/json'
+    }
+
+    expect(
+      (
+        await fetch(`${origin}/v1/system/rooms`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ revision: 8, rooms: [room] })
+        })
+      ).status
+    ).toBe(200)
+
+    const stale = await fetch(`${origin}/v1/system/rooms`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ revision: 7, rooms: [] })
+    })
+    expect(stale.status).toBe(409)
+    expect(await stale.json()).toEqual({ error: 'STALE_REVISION' })
+
+    const conflict = await fetch(`${origin}/v1/system/rooms`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ revision: 8, rooms: [] })
+    })
+    expect(conflict.status).toBe(409)
+    expect(await conflict.json()).toEqual({ error: 'REVISION_CONFLICT' })
+
+    const idempotent = await fetch(`${origin}/v1/system/rooms`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ revision: 8, rooms: [room] })
+    })
+    expect(idempotent.status).toBe(200)
+
+    const desktop = await RealClient.connect(`ws://127.0.0.1:${port}/v1/ws`)
+    desktop.send({ v: 1, type: 'hello', role: 'desktop', roomId: room.roomId })
+    expect(await desktop.next()).toMatchObject({ v: 1, type: 'hello-ok' })
+    desktop.terminate()
+  })
+
+  it('rejects an over-capacity desired state without declaring synchronization', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const serviceToken = 'capacity-check-service-token-is-32-bytes'
+    const server = createRelayServer({
+      config: defaultRelayConfig({
+        publicOrigin: origin,
+        allowInsecureLoopback: true,
+        serviceToken,
+        maxRooms: 1
+      })
+    })
+    running.push(server)
+    await server.listen(port, '127.0.0.1')
+    const headers = {
+      authorization: `Bearer ${serviceToken}`,
+      'content-type': 'application/json'
+    }
+
+    const response = await fetch(`${origin}/v1/system/rooms`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        revision: 1,
+        rooms: [
+          {
+            roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
+            revokeDigest: 'wDndF3Q4aUcFtFV_Inz_HDGAIPBhhZjh-0nhwu1KHxs'
+          },
+          {
+            roomId: 'ZmVkY2JhOTg3NjU0MzIxMA',
+            revokeDigest: 'Hf3CevTyKApVm8q5vbehn8HEGpIbXv57gpLOYEbpGzw'
+          }
+        ]
+      })
+    })
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({ error: 'CAPACITY' })
+
+    const state = await fetch(`${origin}/v1/system/state`, { headers })
+    expect(await state.json()).toMatchObject({
+      synchronized: false,
+      appliedRevision: -1
+    })
+  })
+
+  it('rejects unknown desired-state fields without partially synchronizing', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const serviceToken = 'invalid-state-service-token-is-32-bytes'
+    const server = createRelayServer({
+      config: defaultRelayConfig({
+        publicOrigin: origin,
+        allowInsecureLoopback: true,
+        serviceToken
+      })
+    })
+    running.push(server)
+    await server.listen(port, '127.0.0.1')
+    const headers = {
+      authorization: `Bearer ${serviceToken}`,
+      'content-type': 'application/json'
+    }
+
+    const response = await fetch(`${origin}/v1/system/rooms`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ revision: 1, rooms: [], unexpected: true })
+    })
+    expect(response.status).toBe(400)
+
+    const state = await fetch(`${origin}/v1/system/state`, { headers })
+    expect(await state.json()).toMatchObject({
+      synchronized: false,
+      appliedRevision: -1
+    })
+  })
+
+  it('applies snapshots atomically while preserving unchanged live rooms', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const serviceToken = 'atomic-state-service-token-is-32-bytes'
+    const firstRoom = {
+      roomId: 'MDEyMzQ1Njc4OWFiY2RlZg',
+      revokeDigest: 'wDndF3Q4aUcFtFV_Inz_HDGAIPBhhZjh-0nhwu1KHxs'
+    }
+    const secondRoom = {
+      roomId: 'ZmVkY2JhOTg3NjU0MzIxMA',
+      revokeDigest: 'Hf3CevTyKApVm8q5vbehn8HEGpIbXv57gpLOYEbpGzw'
+    }
+    const server = createRelayServer({
+      config: defaultRelayConfig({
+        publicOrigin: origin,
+        allowInsecureLoopback: true,
+        serviceToken
+      })
+    })
+    running.push(server)
+    await server.listen(port, '127.0.0.1')
+    const headers = {
+      authorization: `Bearer ${serviceToken}`,
+      'content-type': 'application/json'
+    }
+    const reconcile = (revision: number, rooms: typeof firstRoom[]) =>
+      fetch(`${origin}/v1/system/rooms`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ revision, rooms })
+      })
+
+    expect((await reconcile(1, [firstRoom, secondRoom])).status).toBe(200)
+    const first = await RealClient.connect(`ws://127.0.0.1:${port}/v1/ws`)
+    const second = await RealClient.connect(`ws://127.0.0.1:${port}/v1/ws`)
+    first.send({ v: 1, type: 'hello', role: 'desktop', roomId: firstRoom.roomId })
+    second.send({ v: 1, type: 'hello', role: 'desktop', roomId: secondRoom.roomId })
+    expect(await first.next()).toMatchObject({ v: 1, type: 'hello-ok' })
+    expect(await second.next()).toMatchObject({ v: 1, type: 'hello-ok' })
+
+    const conflict = await reconcile(2, [
+      firstRoom,
+      {
+        ...secondRoom,
+        revokeDigest: 'eN8Vqt6b5GcmrW0b8NAfzxdYWxYBnqx1j_os3Of5p4g'
+      }
+    ])
+    expect(conflict.status).toBe(409)
+    expect(await conflict.json()).toEqual({ error: 'ROOM_CREDENTIAL_CONFLICT' })
+
+    first.send({ v: 1, type: 'hello', role: 'desktop', roomId: firstRoom.roomId })
+    second.send({ v: 1, type: 'hello', role: 'desktop', roomId: secondRoom.roomId })
+    expect(await first.next()).toMatchObject({ v: 1, type: 'hello-ok' })
+    expect(await second.next()).toMatchObject({ v: 1, type: 'hello-ok' })
+
+    expect((await reconcile(2, [secondRoom])).status).toBe(200)
+    expect(await first.next()).toEqual({ v: 1, type: 'revoked' })
+    second.send({ v: 1, type: 'hello', role: 'desktop', roomId: secondRoom.roomId })
+    expect(await second.next()).toMatchObject({ v: 1, type: 'hello-ok' })
+    second.terminate()
   })
 
   it('pairs real WS clients, preserves direction, prevents stealing, and drains revoke', async () => {

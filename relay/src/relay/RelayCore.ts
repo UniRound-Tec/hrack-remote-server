@@ -24,6 +24,15 @@ export type CreateRoomResult =
     }
   | { ok: false; reason: 'rate-limited' | 'capacity' }
 
+export interface DesiredRoom {
+  roomId: string
+  revokeDigest: Buffer
+}
+
+export type ReconcileRoomsResult =
+  | { ok: true; effects: RelayEffect[] }
+  | { ok: false; reason: 'credential-conflict' }
+
 interface OpenRoom {
   status: 'open'
   revokeDigest: Buffer
@@ -130,6 +139,45 @@ export class RelayCore {
 
   roomAvailability(roomId: string): 'open' | 'unavailable' {
     return this.#rooms.get(roomId)?.status === 'open' ? 'open' : 'unavailable'
+  }
+
+  reconcileRooms(desiredRooms: DesiredRoom[]): ReconcileRoomsResult {
+    const desiredById = new Map(desiredRooms.map((room) => [room.roomId, room]))
+    for (const desired of desiredRooms) {
+      const existing = this.#rooms.get(desired.roomId)
+      if (
+        existing &&
+        !timingSafeEqual(existing.revokeDigest, desired.revokeDigest)
+      ) {
+        return { ok: false, reason: 'credential-conflict' }
+      }
+    }
+
+    const nextRooms = new Map<string, Room>()
+    for (const desired of desiredRooms) {
+      const existing = this.#rooms.get(desired.roomId)
+      nextRooms.set(
+        desired.roomId,
+        existing?.status === 'open'
+          ? existing
+          : {
+              status: 'open',
+              revokeDigest: desired.revokeDigest,
+              desktop: null,
+              phone: null
+            }
+      )
+    }
+
+    const effects: RelayEffect[] = []
+    for (const [roomId, existing] of this.#rooms) {
+      if (!desiredById.has(roomId) && existing.status === 'open') {
+        effects.push(...this.#revokeOpenRoom(roomId, existing))
+      }
+    }
+    this.#rooms.clear()
+    for (const [roomId, room] of nextRooms) this.#rooms.set(roomId, room)
+    return { ok: true, effects }
   }
 
   revokeRoom(input: {
