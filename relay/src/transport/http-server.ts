@@ -1,6 +1,8 @@
 import {
+  createHash,
   createHmac,
-  randomBytes as systemRandomBytes
+  randomBytes as systemRandomBytes,
+  timingSafeEqual
 } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
@@ -87,6 +89,13 @@ function bearerToken(request: IncomingMessage): string | null {
   if (!authorization?.startsWith('Bearer ')) return null
   const token = authorization.slice('Bearer '.length)
   return token.length > 0 ? token : null
+}
+
+function serviceTokenMatches(actual: string | null, expected: string | null): boolean {
+  if (actual === null || expected === null) return false
+  const actualDigest = createHash('sha256').update(actual).digest()
+  const expectedDigest = createHash('sha256').update(expected).digest()
+  return timingSafeEqual(actualDigest, expectedDigest)
 }
 
 export function createRelayServer(options: RelayServerOptions): RunningRelayServer {
@@ -231,6 +240,14 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
       }
 
       if (request.method === 'POST' && path === `${base}/v1/rooms`) {
+        const serviceAuthenticated = serviceTokenMatches(
+          bearerToken(request),
+          config.serviceToken
+        )
+        if (!serviceAuthenticated && !config.enableDevCreate) {
+          empty(response, 401)
+          return
+        }
         const origin = request.headers.origin
         if (origin !== undefined) {
           let normalized: string
@@ -250,7 +267,10 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
           return
         }
         await readJsonObject(request)
-        const result = core.createRoom({ ipKey: safeIpKey(request) })
+        const result = core.createRoom({
+          ipKey: safeIpKey(request),
+          bypassRateLimit: serviceAuthenticated
+        })
         if (!result.ok) {
           empty(response, result.reason === 'rate-limited' ? 429 : 503)
           return
@@ -290,13 +310,26 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
 
       const rootPath = base === '' ? '/' : `${base}/`
       if (request.method === 'GET' && path === rootPath) {
-        await serveIndex(response, 'generate', false)
+        if (config.enableDevCreate) {
+          await serveIndex(response, 'generate', false)
+        } else {
+          empty(response, 404)
+        }
         return
       }
 
       const demoPath = `${base}/demo`
       const demoPrefix = `${demoPath}/`
       if (
+        !config.enableDevCreate &&
+        request.method === 'GET' &&
+        (path === demoPath || path.startsWith(demoPrefix))
+      ) {
+        empty(response, 404)
+        return
+      }
+      if (
+        config.enableDevCreate &&
         request.method === 'GET' &&
         (path === demoPath || path === demoPrefix)
       ) {
@@ -304,7 +337,11 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
         return
       }
 
-      if (request.method === 'GET' && path.startsWith(demoPrefix)) {
+      if (
+        config.enableDevCreate &&
+        request.method === 'GET' &&
+        path.startsWith(demoPrefix)
+      ) {
         const relativePath = path.slice(demoPrefix.length)
         if (await serveAsset(response, relativePath)) return
         const roomId = decodeURIComponent(relativePath)

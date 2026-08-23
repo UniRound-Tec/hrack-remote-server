@@ -7,6 +7,8 @@ export interface RelayConfig {
   publicOrigin: string
   basePath: string
   allowInsecureLoopback: boolean
+  serviceToken: string | null
+  enableDevCreate: boolean
   maxRooms: number
   maxConnections: number
   maxRateLimitKeys: number
@@ -26,6 +28,8 @@ const defaults: RelayConfig = {
   publicOrigin: 'https://relay.example',
   basePath: '',
   allowInsecureLoopback: false,
+  serviceToken: null,
+  enableDevCreate: false,
   maxRooms: 10_000,
   maxConnections: 20_000,
   maxRateLimitKeys: 50_000,
@@ -86,6 +90,15 @@ export function validateRelayConfig(input: RelayConfig): RelayConfig {
   if (publicUrl.protocol !== 'https:' && !(input.allowInsecureLoopback && loopback)) {
     throw new Error('PUBLIC_ORIGIN must be HTTPS outside explicit loopback development')
   }
+  if (
+    input.serviceToken !== null &&
+    Buffer.byteLength(input.serviceToken, 'utf8') < 32
+  ) {
+    throw new Error('RELAY_SERVICE_TOKEN must be at least 32 bytes')
+  }
+  if (input.enableDevCreate && !loopback) {
+    throw new Error('ENABLE_DEV_CREATE requires a loopback PUBLIC_ORIGIN')
+  }
   return {
     ...input,
     publicOrigin: publicUrl.origin,
@@ -115,11 +128,28 @@ export function validateRelayConfig(input: RelayConfig): RelayConfig {
 
 export function loadRelayConfig(env: NodeJS.ProcessEnv = process.env): RelayConfig {
   const baseline = defaults
+  const enableDevCreate = env.ENABLE_DEV_CREATE === '1'
+  if (
+    env.ENABLE_DEV_CREATE !== undefined &&
+    env.ENABLE_DEV_CREATE !== '' &&
+    !enableDevCreate
+  ) {
+    throw new Error('ENABLE_DEV_CREATE must be empty or 1')
+  }
+  if (env.NODE_ENV === 'production' && enableDevCreate) {
+    throw new Error('ENABLE_DEV_CREATE is forbidden in production')
+  }
+  const serviceToken = env.RELAY_SERVICE_TOKEN || null
+  if (env.NODE_ENV === 'production' && serviceToken === null) {
+    throw new Error('RELAY_SERVICE_TOKEN is required in production')
+  }
   return validateRelayConfig({
     ...baseline,
     publicOrigin: env.PUBLIC_ORIGIN ?? baseline.publicOrigin,
     basePath: env.BASE_PATH ?? baseline.basePath,
     allowInsecureLoopback: env.ALLOW_INSECURE_LOOPBACK === '1',
+    serviceToken,
+    enableDevCreate,
     maxRooms: envInteger(env, 'MAX_ROOMS', baseline.maxRooms),
     maxConnections: envInteger(env, 'MAX_CONNECTIONS', baseline.maxConnections),
     maxRateLimitKeys: envInteger(

@@ -91,21 +91,41 @@ describe('real HTTP and WebSocket server', () => {
     await Promise.all(running.splice(0).map((server) => server.close()))
   })
 
-  it('creates a room over a real localhost HTTP connection', async () => {
+  it('creates a room only with the configured service credential', async () => {
     const port = await unusedPort()
     const origin = `http://127.0.0.1:${port}`
+    const serviceToken = 'service-token-that-is-at-least-32-bytes'
     const server = createRelayServer({
       config: defaultRelayConfig({
         publicOrigin: origin,
-        allowInsecureLoopback: true
+        allowInsecureLoopback: true,
+        serviceToken
       })
     })
     running.push(server)
     await server.listen(port, '127.0.0.1')
 
+    const anonymous = await fetch(`${origin}/v1/rooms`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}'
+    })
+    expect(anonymous.status).toBe(401)
+
+    const wrongCredential = await fetch(`${origin}/v1/rooms`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer wrong-service-token',
+        'content-type': 'application/json'
+      },
+      body: '{}'
+    })
+    expect(wrongCredential.status).toBe(401)
+
     const response = await fetch(`${origin}/v1/rooms`, {
       method: 'POST',
       headers: {
+        authorization: `Bearer ${serviceToken}`,
         'content-type': 'application/json',
         origin
       },
@@ -121,13 +141,30 @@ describe('real HTTP and WebSocket server', () => {
     expect(body.joinUrl).toBe(`${origin}/${body.roomId}`)
   })
 
-  it('pairs real WS clients, preserves direction, prevents stealing, and drains revoke', async () => {
+  it('hides the generation and demo pages when development creation is disabled', async () => {
     const port = await unusedPort()
     const origin = `http://127.0.0.1:${port}`
     const server = createRelayServer({
       config: defaultRelayConfig({
         publicOrigin: origin,
         allowInsecureLoopback: true
+      })
+    })
+    running.push(server)
+    await server.listen(port, '127.0.0.1')
+
+    expect((await fetch(`${origin}/`)).status).toBe(404)
+    expect((await fetch(`${origin}/demo`)).status).toBe(404)
+  })
+
+  it('pairs real WS clients, preserves direction, prevents stealing, and drains revoke', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const server = createRelayServer({
+      config: defaultRelayConfig({
+        publicOrigin: origin,
+        allowInsecureLoopback: true,
+        enableDevCreate: true
       })
     })
     running.push(server)
@@ -197,7 +234,8 @@ describe('real HTTP and WebSocket server', () => {
     const config = defaultRelayConfig({
       publicOrigin: origin,
       basePath: '/remote',
-      allowInsecureLoopback: true
+      allowInsecureLoopback: true,
+      enableDevCreate: true
     })
     const first = createRelayServer({ config })
     running.push(first)
@@ -245,6 +283,7 @@ describe('real HTTP and WebSocket server', () => {
       config: defaultRelayConfig({
         publicOrigin: origin,
         allowInsecureLoopback: true,
+        enableDevCreate: true,
         maxFrameBytes: 256,
         helloDeadlineMs: 40,
         pingIntervalMs: 40,
@@ -292,7 +331,8 @@ describe('real HTTP and WebSocket server', () => {
     const server = createRelayServer({
       config: defaultRelayConfig({
         publicOrigin: origin,
-        allowInsecureLoopback: true
+        allowInsecureLoopback: true,
+        enableDevCreate: true
       }),
       logSecret: new Uint8Array(32).fill(42),
       logger: (record) => records.push(record)

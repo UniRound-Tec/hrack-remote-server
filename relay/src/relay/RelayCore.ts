@@ -92,11 +92,17 @@ export class RelayCore {
     readonly dependencies: RelayDependencies
   ) {}
 
-  createRoom(input: { ipKey: string }): CreateRoomResult {
+  createRoom(input: {
+    ipKey: string
+    bypassRateLimit?: boolean
+  }): CreateRoomResult {
     if (this.#rooms.size >= this.config.maxRooms) {
       return { ok: false, reason: 'capacity' }
     }
-    if (!this.#takeToken(this.#createBuckets, input.ipKey, this.config.createRate)) {
+    if (
+      !input.bypassRateLimit &&
+      !this.#takeToken(this.#createBuckets, input.ipKey, this.config.createRate)
+    ) {
       return { ok: false, reason: 'rate-limited' }
     }
 

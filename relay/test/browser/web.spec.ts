@@ -41,7 +41,8 @@ test.beforeAll(async () => {
     config: defaultRelayConfig({
       publicOrigin: origin,
       basePath: '/remote',
-      allowInsecureLoopback: true
+      allowInsecureLoopback: true,
+      enableDevCreate: true
     })
   })
   await server.listen(port, '127.0.0.1')
