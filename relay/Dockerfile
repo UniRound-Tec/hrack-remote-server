@@ -12,6 +12,9 @@ RUN npm run build
 FROM node:22.23.0-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
+# The relay must be reachable by web/nginx over the Compose network. Its CLI
+# defaults to loopback for host development, so override that inside images.
+ENV HOST=0.0.0.0
 WORKDIR /app
 
 COPY package.json package-lock.json ./
