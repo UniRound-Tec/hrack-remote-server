@@ -4,8 +4,9 @@ HRack 平台单仓库：**web**（平台站，Next.js 16）+ **relay**（远程�
 落地页、账号体系与配对 URL 控制台在 `web/`；协议转发、房间生命周期在 `relay/`。
 
 ```
-浏览器 ──► Nginx(TLS) ─┬─ /          → web     (Next.js, :3000)
-                        └─ /remote/   → relay   (Node,     :3000)
+浏览器 ──► Nginx(TLS) ─┬─ /                       → web   (Next.js, :3000)
+                        ├─ /remote、/remote/        → /dashboard
+                        └─ /remote/{roomId}、/remote/v1/ws → relay (Node, :3000)
 HRack 桌面端 ── 粘贴配对URL / 手机端扫码 ──┘（协议不变）
 ```
 
