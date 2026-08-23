@@ -49,6 +49,24 @@ docker compose --profile edge up -d --build
 不想要 compose 自带 nginx 时，去掉 `--profile edge`，用宿主反代按
 `deploy/nginx.hrack.conf.example` 分流 `/` 与 `/remote/`。
 
+### 真实恢复门禁
+
+对已经运行且把 Relay 映射到宿主机的测试部署，可执行真实 Docker 恢复门禁：
+
+```sh
+TARGET_ORIGIN=http://127.0.0.1:3000 \
+RELAY_INTERNAL_ORIGIN=http://127.0.0.1:3001 \
+RELAY_SERVICE_TOKEN="$RELAY_SERVICE_TOKEN" \
+RELAY_CONTAINER=deploy-relay-1 \
+WEB_CONTAINER=deploy-web-1 \
+RECONCILER_CONTAINER=deploy-pairing-reconciler-1 \
+npm --prefix relay run verify:durable-recovery
+```
+
+该命令会创建并最终删除一个临时账号与配对记录，并明确重启上述三个容器。
+它以 15 秒硬超时验证 Relay/整套服务重启后 URL、roomId 与撤销凭据不变，
+同时覆盖双向 WebSocket、封禁/解封和账号删除后不复活。
+
 ### 创建首位管理员
 
 无邮件服务时有两条逃生路径：在 `.env` 配置至少 24 字节的随机

@@ -93,6 +93,9 @@ services:
     volumes:
       - web-data:/app/data
     restart: unless-stopped
+    # 该进程不监听 Web 镜像的 3000 端口，不能继承镜像 healthcheck。
+    healthcheck:
+      disable: true
     read_only: true
     tmpfs:
       - /tmp

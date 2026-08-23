@@ -18,6 +18,7 @@
     "e2e": "playwright test",
     "preverify:live": "npm run build",
     "verify:live": "tsx scripts/live-verify.ts",
+    "verify:durable-recovery": "node scripts/durable-recovery-verify.mjs",
     "verify:deployed": "node scripts/deployed-verify.mjs",
     "verify:tls": "tsx scripts/tls-live-verify.ts",
     "load:gate": "tsx scripts/load-gate.ts"

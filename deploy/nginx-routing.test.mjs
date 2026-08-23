@@ -5,6 +5,10 @@ import test from 'node:test'
 const config = fs
   .readFileSync(new URL('./nginx.hrack.conf.example', import.meta.url), 'utf8')
   .replace(/^\s*#.*$/gm, '')
+const compose = fs.readFileSync(
+  new URL('./docker-compose.yml', import.meta.url),
+  'utf8'
+)
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -33,4 +37,12 @@ test('keeps the platform root separate from public pairing routes', () => {
   assert.match(relay, /proxy_pass\s+http:\/\/relay:3000;/)
   assert.match(relay, /proxy_set_header\s+Upgrade\s+\$http_upgrade;/)
   assert.match(relay, /proxy_set_header\s+Connection\s+\$connection_upgrade;/)
+})
+
+test('does not apply the Web server healthcheck to the reconciler process', () => {
+  const service = compose.match(
+    /^  pairing-reconciler:\s*$([\s\S]*?)(?=^  [a-z][\w-]*:\s*$)/m
+  )
+  assert.ok(service, 'missing pairing-reconciler service')
+  assert.match(service[1], /^    healthcheck:\s*\r?\n      disable: true\s*$/m)
 })
