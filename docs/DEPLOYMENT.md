@@ -165,6 +165,26 @@ HTTP 端口。宿主反代把整个站点转到该端口，并传递 `Host`、`X
 npm run backup:create -- --output deploy/backups/2026-08-23T-release
 ```
 
+若生产宿主机只安装了 Docker、没有 Node，不要临时污染宿主机运行时。可在仓库根用一次性
+运维容器执行同一份脚本；仓库必须挂载到容器内的**相同绝对路径**，这样脚本创建的嵌套
+归档容器才能正确访问宿主机备份目录：
+
+```sh
+repo_root=$(pwd)
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$repo_root:$repo_root" \
+  -w "$repo_root" \
+  docker:29-cli@sha256:000bb62ff495f986c9f5578eb67cc2cb98b91138eda81d7762d5371eb8a497fe \
+  sh -lc 'apk add --no-cache nodejs git >/dev/null && \
+    git config --global --add safe.directory "$PWD" && \
+    node ops/platform-backup.mjs create \
+      --output deploy/backups/2026-08-23T-release'
+```
+
+该容器只提供 Node、Git 与 Docker CLI；实际备份仍来自精确标记的生产 `web-data` 卷，
+生成物仍落在宿主机仓库的 `deploy/backups`。首次运行会下载运维镜像和临时软件包。
+
 工具只停止备份前确实在运行的 Web 与协调器，归档完整 `web-data`（包含 WAL/SHM），并在
 `finally` 中恢复这些写入者。输出包含 `web-data.tar.gz` 和 `manifest.json`；manifest 记录
 SHA-256、大小、Git commit 与镜像标识，但明确不包含秘密。Relay 在短暂停写期间继续承载
@@ -179,6 +199,13 @@ SHA-256、大小、Git commit 与镜像标识，但明确不包含秘密。Relay
 
 ```sh
 npm run backup:rehearse -- \
+  --manifest deploy/backups/2026-08-23T-release/manifest.json
+```
+
+无 Node 宿主机沿用上一节的一次性运维容器，把最后的 Node 命令改为：
+
+```sh
+node ops/platform-backup.mjs rehearse \
   --manifest deploy/backups/2026-08-23T-release/manifest.json
 ```
 
