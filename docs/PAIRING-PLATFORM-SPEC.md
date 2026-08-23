@@ -1,7 +1,7 @@
 # HRack 配对URL平台 · 规格说明书(Spec)v1
 
 > 范围:单仓库双工作区 —— `relay/`(中继) 与 `web/`(平台站,Next.js)。
-> 本文档是平台级唯一规格来源；状态：v1 的 P1–P4 已实现并通过真实验收（2026-08-23）。P2/P3/P4 可执行细则分别见对应独立规格。
+> 本文档是平台级唯一规格来源；状态：v1 的 P1–P4 已实现并通过真实验收，P5 正在实施（2026-08-23）。P2/P3/P4/P5 可执行细则分别见对应独立规格。
 
 ---
 
@@ -14,7 +14,7 @@
 ### 1.1 目标
 
 - 落地页 + 注册/登录(邮箱密码、GitHub OAuth、Google OAuth)
-- 注册需邮箱验证;OAuth 注册视为已验证
+- 邮箱验证可配置且自部署默认关闭；官方部署强制开启，密码与 OAuth 走同一验证策略
 - 配对URL 的创建/查看/删除/失效重建,每用户同时仅一条 active
 - 匿名建房接口封死(仅服务凭证可调)
 - 配对URL 随账号持久化;Relay 或整套服务重启后自动恢复同一个 URL
@@ -45,7 +45,7 @@
 |---|---|---|
 | D1 | 桌面端匿名建房兼容性 | 生产桌面端无此业务,接口仅为早期调试便利 → **无兼容包袱,第一天封死** |
 | D2 | 登录方式 | 邮箱密码 + GitHub/Google OAuth |
-| D3 | 邮箱验证 | 需要;OAuth 注册跳过 |
+| D3 | 邮箱验证 | 可配置、自部署默认关闭；官方部署开启，密码与 OAuth 不得互相绕过 |
 | D4 | 数据库 | SQLite + Drizzle ORM |
 | D5 | 中继内置生成页 | 仅 `ENABLE_DEV_CREATE=1` 的非 production loopback 环境提供;生产根页和 demo 均隐藏 |
 | D6 | 认证库 | Better Auth(Auth.js v5 长期 beta 不采用) |
@@ -74,7 +74,7 @@
 
 1. 访问 `/` 落地页 → 点击"注册"
 2. 邮箱+密码注册,或 GitHub/Google 一键授权
-3. 邮箱密码注册后进入"查收验证邮件"页;点击邮件链接完成验证(**验证前无法登录**)
+3. 验证开关关闭时注册后直接建立会话；开启时查收 6 位验证码，验证前不能进入 dashboard
 4. 登录进入 `/dashboard`
 5. 点击"创建配对URL" → 获得 URL + 二维码,可复制
 6. 把 URL 粘贴进 HRack 桌面端(或手机端扫码)完成配对
@@ -87,14 +87,15 @@
 产品介绍 + 登录/注册入口。视觉沿用 HRack Light 配色与 Maple Mono 字体;五语言(zh-CN/zh-TW/en/ja/ko)即时切换,文案集中于 `web/src/i18n/`。
 
 ### FR-2 注册 `/register`
-- 邮箱 + 密码(最小长度 8);注册即发送验证邮件
+- 邮箱 + 密码(最小长度 8);验证开启时注册后发送 6 位验证码
 - 提供 GitHub / Google OAuth 按钮
 - 同邮箱策略:受信提供商(GitHub/Google)可与同邮箱的既有账号自动关联(Better Auth `accountLinking`,实现时按其配置项落地)
 
 ### FR-3 邮箱验证
-- 验证链接有效期 24 小时,可重发(每账号每小时最多 3 次)
-- **未验证账号禁止登录**(Better Auth `emailVerification.requireEmailVerification`),登录接口返回明确错误码,前端引导去重发
-- OAuth 注册的账号直接标记已验证
+- `EMAIL_VERIFICATION_REQUIRED` 控制，自部署默认关闭；官方部署必须开启
+- 开启时使用 6 位验证码，有效期 10 分钟，最多尝试 5 次；每账号每小时最多重发 3 次
+- 开启时未验证账号禁止进入 dashboard，密码与 GitHub/Google OAuth 使用同一验证策略
+- 关闭时注册后直接建立会话；关闭不代表邮件 provider 已配置
 
 ### FR-4 登录 `/login`
 - 邮箱密码 + GitHub/Google 两个 OAuth 按钮;登录建立 HTTPOnly Cookie 会话
@@ -105,7 +106,7 @@
 - 删除按钮(二次确认);删除成功后回到空态
 - 恢复中(recovering)态:Relay 暂不可达或尚未同步时显示"正在恢复",不修改持久状态、不要求重新生成
 - stale 仅用于凭证无法解密或 origin/base 不兼容等不可自动恢复错误,提供显式轮换
-- 未验证不可达(被 FR-3 拦在登录前)
+- 验证开启时未验证不可达；关闭时不设置该门槛
 
 ### FR-6 每用户一条约束
 - 数据层:`partial UNIQUE INDEX (user_id) WHERE status='active'` 兜底
@@ -242,7 +243,7 @@ CREATE UNIQUE INDEX one_active_per_user
 | 账号封禁/解封 | 从期望集合移除/重新加入;解封恢复同一 URL |
 | revoke token 无法解密 | 标记 stale,不阻塞其它账号恢复,要求显式轮换 |
 | OAuth 邮箱与本地账号同邮箱 | 受信提供商自动关联同一账号 |
-| 验证邮件链接过期 | 登录报错引导重发;旧链接作废 |
+| 邮箱验证码过期 | 引导重发；只接受最新验证码，旧码作废 |
 | 中继 503(房间满) | 前端提示稍后再试;不消耗用户的唯一名额 |
 
 ## 11. 测试计划
@@ -250,7 +251,7 @@ CREATE UNIQUE INDEX one_active_per_user
 - **中继黑盒(Vitest)**:无凭证 401 / 有凭证 201;`ENABLE_DEV_CREATE=1` 仅本地回归;原子 reconcile、revision 乱序、首次同步 fail closed;凭证与房间身份不出日志
 - **Web 单测(Vitest)**:加密工具、配对状态机、唯一约束、projection revision、有效账号快照
 - **恢复集成测试**:真实账号记录→真实 WebSocket 配对→仅重启 Relay→15 秒内用完全相同 URL 再次配对
-- **E2E(Playwright)**:注册→登录→创建→展示二维码→删除→轮换;恢复中不生成新 URL;未登录访问 /dashboard 被 302
+- **E2E(Playwright)**:默认关闭验证时注册→登录→创建→展示二维码→删除→轮换；开启验证时真实验证码后才可登录；恢复中不生成新 URL；未登录访问 /dashboard 被 302
 - **开发冒烟**:`next dev` 与 `next start` 各验证一次 `/remote/*` rewrites 的 WebSocket 升级路径(`/remote/v1/ws`)
 - **既有门禁不回退**:`npm run typecheck`、`npm test`、`npm run e2e`、`verify:live` 全绿
 
@@ -258,10 +259,11 @@ CREATE UNIQUE INDEX one_active_per_user
 
 | 阶段 | 内容 | 验收标准 |
 |---|---|---|
-| **P1** | `web/` 脚手架;落地页;注册/登录/邮箱验证;GitHub/Google OAuth | 全部认证流走通(开发环境验证链接打印到控制台);`/dashboard` 空壳受 proxy 保护 |
+| **P1** | `web/` 脚手架;落地页;注册/登录/可选邮箱验证;GitHub/Google OAuth | 默认关闭验证可登录；开启后开发环境用受控验证码文件验收；`/dashboard` 受 proxy 保护 |
 | **P2** | 服务凭证 + 调试开关 + 原子期望状态接口 + projection revision + 自动协调器 | 匿名创建 401;生产无生成根页;Relay 重启后 15 秒内恢复相同 URL;详见 P2 独立规格 |
 | **P3** | dashboard 完整 CRUD + 二维码 + recovering/轮换交互 | E2E 主链路全绿;恢复过程不生成新 URL |
 | **P4** | Nginx 示例更新、Compose 隔离门禁、部署/备份/恢复文档；详见 [P4 独立规格](./PAIRING-P4-DEPLOYMENT-SPEC.md) | `verify:p4-deployment` 从零部署通过；同 URL 重启恢复 |
+| **P5** | 正式域名/TLS、Resend 真实认证、公网端到端远控、恢复演练、监控告警与发布关门；详见 [P5 独立规格](./PAIRING-P5-PRODUCTION-RELEASE-SPEC.md) | 七项真实生产证据齐全；`verify:p5-release` 通过 |
 
 ## 13. 未来扩展(非 v1)
 

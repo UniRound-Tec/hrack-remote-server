@@ -36,6 +36,7 @@ npm run typecheck    # relay + web
 npm run test         # relay + web 单测/黑盒
 npm run build        # relay 产物 + web standalone 产物
 npm run e2e          # relay Playwright
+npm run test:ops     # 备份/监控运维模块
 ```
 
 ## 部署（单命令）
@@ -77,6 +78,15 @@ npm --prefix relay run verify:durable-recovery
 该命令会创建并最终删除一个临时账号与配对记录，并明确重启上述三个容器。
 它以 15 秒硬超时验证 Relay/整套服务重启后 URL、roomId 与撤销凭据不变，
 同时覆盖双向 WebSocket、封禁/解封和账号删除后不复活。
+
+正式生产发布、真实邮件、手机公网远控、恢复演练和监控告警的关门条件见
+[`docs/PAIRING-P5-PRODUCTION-RELEASE-SPEC.md`](docs/PAIRING-P5-PRODUCTION-RELEASE-SPEC.md)。
+P5 明确区分自动探测与真实验收：本地测试通过不能替代 Resend 实际送达和手机 ↔ 桌面控制。
+对真实域名执行只读发布探测：
+
+```sh
+npm run verify:p5-release -- --origin https://hrack.modplex.app
+```
 
 ### 创建首位管理员
 

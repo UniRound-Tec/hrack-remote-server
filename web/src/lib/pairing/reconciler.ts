@@ -39,6 +39,13 @@ export interface PairingReconcileLog {
   error?: string
 }
 
+export interface PairingReconcilerHealth {
+  checkedAt: number
+  lastSuccessAt: number | null
+  consecutiveFailures: number
+  error?: string
+}
+
 export interface RunPairingReconcilerOptions {
   relayOrigin: string
   serviceToken: string
@@ -47,7 +54,9 @@ export interface RunPairingReconcilerOptions {
   readProjection?: () => PairingProjection
   fetcher?: typeof fetch
   logger?: (record: PairingReconcileLog) => void
+  healthReporter?: (health: PairingReconcilerHealth) => void
   random?: () => number
+  now?: () => number
 }
 
 export interface PairingReconcilerConfig {
@@ -214,9 +223,26 @@ export async function runPairingReconciler(
   options: RunPairingReconcilerOptions
 ): Promise<void> {
   const logger = options.logger ?? (() => {})
+  const healthReporter = options.healthReporter ?? (() => {})
   const random = options.random ?? Math.random
+  const now = options.now ?? Date.now
   let previousInstanceId: string | undefined
   let failures = 0
+  let lastSuccessAt: number | null = null
+
+  function reportHealth(error?: string): void {
+    try {
+      healthReporter({
+        checkedAt: now(),
+        lastSuccessAt,
+        consecutiveFailures: failures,
+        ...(error === undefined ? {} : { error })
+      })
+    } catch {
+      // The health adapter must never interrupt reconciliation. Its stale output
+      // will make the container unhealthy and let the external monitor report it.
+    }
+  }
 
   while (!options.signal.aborted) {
     try {
@@ -231,6 +257,7 @@ export async function runPairingReconciler(
       })
       previousInstanceId = result.instanceId
       failures = 0
+      lastSuccessAt = now()
       logger({
         event: 'pairing-reconcile',
         result: 'applied',
@@ -238,17 +265,20 @@ export async function runPairingReconciler(
         roomCount: result.roomCount,
         instanceChanged: result.instanceChanged
       })
+      reportHealth()
     } catch (error) {
       if (options.signal.aborted) break
       failures += 1
+      const errorCode =
+        error instanceof RelayReconcileError
+          ? error.code
+          : 'PROJECTION_OR_NETWORK_ERROR'
       logger({
         event: 'pairing-reconcile',
         result: 'failed',
-        error:
-          error instanceof RelayReconcileError
-            ? error.code
-            : 'PROJECTION_OR_NETWORK_ERROR'
+        error: errorCode
       })
+      reportHealth(errorCode)
     }
 
     const maximumDelay =

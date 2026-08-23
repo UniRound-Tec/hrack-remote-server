@@ -172,6 +172,7 @@ describe('pairing reconciler', () => {
       )
     })
     const logs: unknown[] = []
+    const health: unknown[] = []
 
     await runPairingReconciler({
       relayOrigin: origin,
@@ -179,7 +180,9 @@ describe('pairing reconciler', () => {
       intervalMs: 5,
       signal: controller.signal,
       readProjection: () => ({ revision: 0, rooms: [] }),
-      logger: (record) => logs.push(record)
+      logger: (record) => logs.push(record),
+      healthReporter: (record) => health.push(record),
+      now: () => 1_700_000_000_000
     })
 
     expect(reconcileRequests).toBe(3)
@@ -205,6 +208,65 @@ describe('pairing reconciler', () => {
         roomCount: 0,
         instanceChanged: true
       })
+    ])
+    expect(health).toEqual([
+      {
+        checkedAt: 1_700_000_000_000,
+        lastSuccessAt: 1_700_000_000_000,
+        consecutiveFailures: 0
+      },
+      {
+        checkedAt: 1_700_000_000_000,
+        lastSuccessAt: 1_700_000_000_000,
+        consecutiveFailures: 0
+      },
+      {
+        checkedAt: 1_700_000_000_000,
+        lastSuccessAt: 1_700_000_000_000,
+        consecutiveFailures: 0
+      }
+    ])
+  })
+
+  it('reports consecutive failures without letting a broken health adapter stop the loop', async () => {
+    const controller = new AbortController()
+    const health: unknown[] = []
+    let attempts = 0
+    const origin = await relayFixture((_request, response) => {
+      attempts += 1
+      response.writeHead(503, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ error: 'RELAY_UNAVAILABLE' }))
+    })
+
+    await runPairingReconciler({
+      relayOrigin: origin,
+      serviceToken: 'failure-loop-token-is-at-least-32-bytes',
+      intervalMs: 1,
+      signal: controller.signal,
+      readProjection: () => ({ revision: 0, rooms: [] }),
+      random: () => 0,
+      now: () => 1_700_000_000_000,
+      healthReporter: (record) => {
+        health.push(record)
+        if (health.length === 1) throw new Error('health sink unavailable')
+        controller.abort()
+      }
+    })
+
+    expect(attempts).toBe(2)
+    expect(health).toEqual([
+      {
+        checkedAt: 1_700_000_000_000,
+        lastSuccessAt: null,
+        consecutiveFailures: 1,
+        error: 'RELAY_UNAVAILABLE'
+      },
+      {
+        checkedAt: 1_700_000_000_000,
+        lastSuccessAt: null,
+        consecutiveFailures: 2,
+        error: 'RELAY_UNAVAILABLE'
+      }
     ])
   })
 

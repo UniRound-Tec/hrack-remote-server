@@ -151,51 +151,47 @@ token、Cookie 或协议 payload。
 3. TLS 私钥/证书与 Nginx 的本地修改；
 4. 当前 Git commit 或镜像版本。
 
-一致性文件备份使用短暂停写。以下命令假设 `.env` 中的项目名是 `hrack`，并且当前目录
-是 `deploy/`：
+在仓库根执行一致性备份：
 
 ```sh
-mkdir -p backups
-docker compose stop pairing-reconciler web
-docker run --rm \
-  --mount type=volume,src=hrack_web-data,dst=/data,readonly \
-  --mount type=bind,src="$PWD/backups",dst=/backup \
-  alpine:3.22 \
-  tar -czf /backup/hrack-web-data.tar.gz -C /data .
-docker compose start web pairing-reconciler
+npm run backup:create -- --output deploy/backups/2026-08-23T-release
 ```
 
-Relay 可在停写期间继续承载已经存在的内存房间。备份后检查压缩包非空，并把它与对应
-密钥版本、代码版本放到受控位置。不要只复制 `*.db` 而遗漏 WAL/SHM。
+工具只停止备份前确实在运行的 Web 与协调器，归档完整 `web-data`（包含 WAL/SHM），并在
+`finally` 中恢复这些写入者。输出包含 `web-data.tar.gz` 和 `manifest.json`；manifest 记录
+SHA-256、大小、Git commit 与镜像标识，但明确不包含秘密。Relay 在短暂停写期间继续承载
+已有运行时房间。
+
+将归档、manifest 与对应密钥版本放到受控位置。`.env`、TLS 私钥和长期密钥必须单独进入
+秘密管理/加密备份；不要把它们复制进普通归档或工单。
 
 ## 8. 恢复演练
 
-先在隔离主机演练。恢复生产前确认目标卷确实为 `hrack_web-data`：
+先执行自动隔离演练：
 
 ```sh
-docker compose down
-docker volume inspect hrack_web-data
+npm run backup:rehearse -- \
+  --manifest deploy/backups/2026-08-23T-release/manifest.json
 ```
 
-确认目标后清空该卷并解包备份：
+工具先复核 SHA-256，只允许恢复到它自己创建且带
+`com.hrack.restore-rehearsal=true` 标签的临时卷，然后用真实 SQLite
+`PRAGMA integrity_check` 检查数据库和必需表，最后删除临时卷。它拒绝把生产卷当作目标。
+
+正式发布前还要把备份恢复到隔离 Compose 项目，使用与备份匹配的长期密钥，并人工验证：
+
+1. 既有账号能登录，管理员角色不变；
+2. dashboard 中原配对 URL 完全不变；
+3. 协调器把该配对记录恢复为运行时房间，真实 WebSocket 可重新连接。
+
+只有灾难恢复时才允许覆盖生产卷。操作前下线生产、再次核对精确卷名和备份 SHA-256；
+恢复命令必须在维护窗口按已审核工单执行。不要使用：
 
 ```sh
-docker run --rm \
-  --mount type=volume,src=hrack_web-data,dst=/data \
-  --mount type=bind,src="$PWD/backups",dst=/backup,readonly \
-  alpine:3.22 sh -eu -c \
-  'find /data -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +; tar -xzf /backup/hrack-web-data.tar.gz -C /data'
+docker compose down -v
 ```
 
-恢复与备份匹配的 `.env` 密钥后执行：
-
-```sh
-docker compose --profile edge up -d --build --wait
-docker compose --profile edge ps
-```
-
-登录一个已有账号，确认原 dashboard URL 完全不变并能配对。不要使用
-`docker compose down -v`；它会永久删除账号和配对事实。
+它会永久删除账号和配对事实。
 
 ## 9. 升级与回滚
 
@@ -230,7 +226,45 @@ npm run verify:p4-deployment
 
 本地门禁使用 `docker-compose.verify.yml` 和 HTTP loopback Nginx；这两个文件不能用于公网。
 
-## 11. Relay 运行限制与容量
+## 11. 健康监控、告警与日志轮转
+
+Compose 默认启动 `production-monitor`。它每 30 秒检查公网 TLS/HTTPS、公开安全边界、
+内部 Web/Relay 和 `pairing-reconciler` 的独立健康接口；连续 3 次失败才告警，恢复后只通知
+一次。协调器从最近一次成功开始超过 `max(30 秒, 3 × 校准周期)` 会变为 unhealthy。
+
+至少配置一个独立接收端：
+
+```dotenv
+MONITOR_ALERT_WEBHOOK_URL=https://alerts.example/hooks/hrack
+# 或复用 Resend，但告警进程不依赖 Web 存活：
+MONITOR_ALERT_EMAIL_TO=ops@example.com
+RESEND_API_KEY=...
+SMTP_FROM=HRack <noreply@modplex.app>
+```
+
+告警只包含检查名和时间，不包含响应 body、邮箱、配对 URL、roomId 或 token。上线时在维护
+窗口依次停止/恢复 `pairing-reconciler` 和 Relay，等待失败阈值，确认真实告警与恢复通知。
+
+所有长期容器默认使用 Docker `json-file` 的 `10m × 5` 上限，可用 `LOG_MAX_SIZE` 和
+`LOG_MAX_FILES` 调整。可用下列命令核对，输出中的 `Config` 应含 `max-size`/`max-file`：
+
+```sh
+docker inspect hrack-web-1 --format '{{json .HostConfig.LogConfig}}'
+docker compose ps
+```
+
+真实公网只读关门检查：
+
+```sh
+npm run verify:p5-release -- --origin https://hrack.modplex.app
+```
+
+在生产主机加载受控 `.env` 后，可设置 `P5_REQUIRE_PRODUCTION_CONFIG=1` 再运行；它只报告
+配置项是否存在，不输出值，并额外检查强制验证、Resend 发件域、告警接收端、setup token
+已删除及匿名调试开关关闭。正式清单见
+[`PAIRING-P5-RELEASE-CHECKLIST.md`](./PAIRING-P5-RELEASE-CHECKLIST.md)。
+
+## 12. Relay 运行限制与容量
 
 `GET /remote/healthz` 只返回 `{ "ok": true }`，不暴露房间数或同步 revision。Relay 必须
 保持单副本。多副本需要另行设计房间所有权、跨实例协调和路由，不能用 round-robin 或

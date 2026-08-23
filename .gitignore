@@ -8,6 +8,8 @@ docs/*
 !docs/PAIRING-P2-DURABLE-RELAY-SPEC.md
 !docs/PAIRING-P3-DASHBOARD-SPEC.md
 !docs/PAIRING-P4-DEPLOYMENT-SPEC.md
+!docs/PAIRING-P5-PRODUCTION-RELEASE-SPEC.md
+!docs/PAIRING-P5-RELEASE-CHECKLIST.md
 !docs/VALIDATION.md
 !docs/adr/
 docs/adr/*
@@ -22,6 +24,7 @@ test-results/
 *.log
 *.tsbuildinfo
 coverage/
+deploy/backups/
 .shots/
 .next/
 web/data/

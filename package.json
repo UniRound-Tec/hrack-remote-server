@@ -9,9 +9,13 @@
     "dev:web": "node scripts/dev.mjs --only web",
     "build": "npm --prefix relay run build && npm --prefix web run build && npm --prefix web run build:reconciler",
     "typecheck": "npm --prefix relay run typecheck && npm --prefix web run typecheck",
-    "test": "npm --prefix relay run test && npm --prefix web run test && node --test deploy/nginx-routing.test.mjs",
+    "test": "npm --prefix relay run test && npm --prefix web run test && node --test deploy/nginx-routing.test.mjs && npm run test:ops",
     "e2e": "npm --prefix relay run e2e",
-    "verify:p4-deployment": "node scripts/verify-p4-deployment.mjs"
+    "verify:p4-deployment": "node scripts/verify-p4-deployment.mjs",
+    "test:ops": "node --test ops/*.test.mjs",
+    "verify:p5-release": "node ops/production-monitor.mjs --once",
+    "backup:create": "node ops/platform-backup.mjs create",
+    "backup:rehearse": "node ops/platform-backup.mjs rehearse"
   },
   "engines": {
     "node": ">=22"

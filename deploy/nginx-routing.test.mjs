@@ -82,12 +82,14 @@ test('preserves the complete browser authority for Next Server Actions', () => {
   }
 })
 
-test('does not apply the Web server healthcheck to the reconciler process', () => {
+test('uses the reconciler-owned health interface instead of the Web healthcheck', () => {
   const service = compose.match(
     /^  pairing-reconciler:\s*$([\s\S]*?)(?=^  [a-z][\w-]*:\s*$)/m
   )
   assert.ok(service, 'missing pairing-reconciler service')
-  assert.match(service[1], /^    healthcheck:\s*\r?\n      disable: true\s*$/m)
+  assert.doesNotMatch(service[1], /^    healthcheck:\s*\r?\n      disable: true\s*$/m)
+  assert.match(service[1], /^      RECONCILER_HEALTH_PORT: "3001"\s*$/m)
+  assert.match(service[1], /fetch\('http:\/\/127\.0\.0\.1:3001\/healthz'\)/)
   assert.match(
     service[1],
     /^      BETTER_AUTH_URL: \$\{PUBLIC_ORIGIN:\?set in \.env\}\s*$/m

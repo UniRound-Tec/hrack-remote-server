@@ -8,6 +8,10 @@ services:
     ports:
       - "127.0.0.1:${VERIFY_RELAY_PORT:?set by P4 gate}:3000"
 
+  production-monitor:
+    environment:
+      PUBLIC_ORIGIN: http://nginx-verify
+
   nginx-verify:
     image: nginx:1.27-bookworm
     profiles:
