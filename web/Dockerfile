@@ -7,7 +7,7 @@ RUN npm ci
 
 COPY . .
 RUN mkdir -p /app/data && chown node:node /app/data
-RUN npm run build
+RUN npm run build && npm run build:reconciler
 
 FROM node:22.23.0-bookworm-slim AS runtime
 
@@ -22,6 +22,9 @@ COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
+COPY --from=build --chown=node:node /app/dist-reconciler ./dist-reconciler
+# Next standalone traces the web server, not the separately compiled worker.
+COPY --from=build --chown=node:node /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
 
 # SQLite 数据目录（compose 挂 web-data 卷到 /app/data）
 RUN mkdir -p /app/data && chown node:node /app/data

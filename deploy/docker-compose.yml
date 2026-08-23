@@ -1,4 +1,4 @@
-# HRack 平台一键部署：relay（中继）+ web（平台站）+ 可选 nginx 边缘。
+# HRack 平台一键部署：relay（中继）+ web（平台站）+ 配对协调器 + 可选 nginx 边缘。
 # 用法：
 #   docker compose up -d --build                # relay + web
 #   docker compose --profile edge up -d --build # 连同 nginx（80/443）一起
@@ -16,7 +16,7 @@ services:
       # 对外可见源，决定 joinUrl 拼接；带上 nginx/反代 对外的 https 域名
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?set in .env}
       BASE_PATH: /remote
-      # 服务凭证：web 调中继 create/探活使用；未设置时创建一律 401
+      # 服务凭证：内部创建、吊销与期望状态同步；未设置时创建一律 401
       RELAY_SERVICE_TOKEN: ${RELAY_SERVICE_TOKEN:?set in .env}
       # 生成页匿名创建调试开关，生产保持空
       ENABLE_DEV_CREATE: ${ENABLE_DEV_CREATE:-}
@@ -72,6 +72,34 @@ services:
     # 不上 edge profile 时，取消注释从宿主直连调试：
     # ports:
     #   - "30001:3000"
+
+  pairing-reconciler:
+    build:
+      context: ../web
+    command:
+      - node
+      - dist-reconciler/scripts/pairing-reconciler.js
+    environment:
+      HRACK_WEB_DATA: /app/data
+      RELAY_INTERNAL_ORIGIN: http://relay:3000
+      RELAY_SERVICE_TOKEN: ${RELAY_SERVICE_TOKEN:?set in .env}
+      PAIRING_ENC_KEY: ${PAIRING_ENC_KEY:?set in .env}
+      PAIRING_RECONCILE_INTERVAL_MS: ${PAIRING_RECONCILE_INTERVAL_MS:-5000}
+    depends_on:
+      relay:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    volumes:
+      - web-data:/app/data
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
   # 无邮件时的 CLI 逃生通道。包装器把固定 --config 插到动态子命令之后。
   web-tools:

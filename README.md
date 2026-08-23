@@ -15,7 +15,7 @@ HRack 桌面端 ── 粘贴配对URL / 手机端扫码 ──┘（协议不�
 |---|---|
 | `web/` | 平台站：落地页（5 语言）、账号/OAuth、运营后台与配对控制台 |
 | `relay/` | 中继：单进程内存态房间，零业务逻辑，服务凭证保护创建 |
-| `deploy/` | `docker-compose.yml`（relay + web + 可选 nginx）与反代示例 |
+| `deploy/` | `docker-compose.yml`（relay + web + 配对协调器 + 可选 nginx）与反代示例 |
 
 ## 开发
 
@@ -88,5 +88,7 @@ GitHub 需授权 `user:email`；私有主邮箱会从 `/user/emails` 解析。Pr
 - SMTP/OAuth secret、密码、OTP、Cookie、Authorization、setup token 与配对 token 不进入 API 响应、审计字段或访问日志。
 - `/api/auth/*`、`/api/admin/*`、`/dashboard` 与 `/admin` 在 Nginx 示例中关闭访问日志；SQLite 位于 `web-data` 卷，升级或回滚前先备份。
 
-中继继续维持单副本、read-only、无状态卷；房间仅驻留内存，Web 只通过
-`RELAY_SERVICE_TOKEN` 创建并持有加密的撤销凭据。
+中继继续维持单副本、read-only、无状态卷；账号数据库持久保存稳定的配对
+URL 与加密撤销凭据，独立协调器每 5 秒把有效账号投影回内存房间。Relay
+重启后会自动恢复相同 URL，不依赖用户访问 dashboard；内部调用统一使用
+`RELAY_SERVICE_TOKEN`，可通过 `PAIRING_RECONCILE_INTERVAL_MS` 调整校准周期。

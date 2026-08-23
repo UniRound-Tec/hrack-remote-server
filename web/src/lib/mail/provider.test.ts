@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { closeDb } from '../db'
 import {
   isMailReady,
   MailUnavailableError,
@@ -29,13 +30,20 @@ const ENV_KEYS = [
   'SMTP_SECURITY'
 ] as const
 
+let dataDir: string
+
 beforeEach(() => {
+  closeDb()
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hrack-mail-provider-'))
+  vi.stubEnv('HRACK_WEB_DATA', dataDir)
   for (const key of ENV_KEYS) vi.stubEnv(key, '')
 })
 
 afterEach(() => {
+  closeDb()
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
+  fs.rmSync(dataDir, { recursive: true, force: true })
 })
 
 describe('mail provider resolution', () => {

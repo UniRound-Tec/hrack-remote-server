@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:reconciler": "tsc -p tsconfig.reconciler.json",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

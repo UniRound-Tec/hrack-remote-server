@@ -1,12 +1,26 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { closeDb } from '../db'
 import {
   emptyToUndef,
   loadRuntimeConfig,
   readEmailVerificationRequired
 } from './resolve'
 
+let dataDir: string
+
+beforeEach(() => {
+  closeDb()
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hrack-settings-resolve-'))
+  vi.stubEnv('HRACK_WEB_DATA', dataDir)
+})
+
 afterEach(() => {
+  closeDb()
   vi.unstubAllEnvs()
+  fs.rmSync(dataDir, { recursive: true, force: true })
 })
 
 describe('runtime auth config', () => {
