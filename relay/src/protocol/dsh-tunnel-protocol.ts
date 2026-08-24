@@ -11,7 +11,9 @@ export const DSH_TUNNEL_LIMITS = {
   headersBytes: 32 * 1024,
   headerValueBytes: 8 * 1024,
   headerCount: 64,
-  concurrentHttp: 16,
+  // The official DSH boot graph currently fans out across 40+ plugin bundles.
+  // Keep the byte budgets unchanged, but allow one complete browser boot wave.
+  concurrentHttp: 64,
   concurrentSse: 1,
   concurrentWebSocket: 2
 } as const
