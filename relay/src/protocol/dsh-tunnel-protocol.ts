@@ -55,6 +55,20 @@ export interface DshTunnelBinaryFrame {
   payload: Uint8Array
 }
 
+/** RFC 6455 codes accepted by WebSocket#close; 1005/1006/1015 are wire-only. */
+export function isDshWebSocketCloseCode(code: unknown): code is number {
+  return (
+    typeof code === 'number' &&
+    Number.isInteger(code) &&
+    ((code >= 1000 && code <= 1014 && ![1004, 1005, 1006].includes(code)) ||
+      (code >= 3000 && code <= 4999))
+  )
+}
+
+export function normalizeDshWebSocketCloseCode(code: number): number {
+  return isDshWebSocketCloseCode(code) ? code : 1001
+}
+
 export type DshTunnelParseResult<T> =
   | { ok: true; value: T }
   | { ok: false; reason: string }
@@ -171,7 +185,7 @@ export function parseDshTunnelControl(text: string): DshTunnelParseResult<DshTun
       if (!exactKeys(raw, ['type', 'streamId', 'status']) || !streamId(raw.streamId) || typeof raw.status !== 'number' || !Number.isInteger(raw.status) || raw.status < 100 || raw.status > 599) return fail('invalid-ws-open-reject')
       return { ok: true, value: { type: raw.type, streamId: raw.streamId, status: raw.status } }
     case 'ws-close':
-      if (!exactKeys(raw, ['type', 'streamId', 'code', 'reason']) || !streamId(raw.streamId) || typeof raw.code !== 'number' || !Number.isInteger(raw.code) || raw.code < 1000 || raw.code > 4999 || (raw.reason !== undefined && !boundedString(raw.reason, 123))) return fail('invalid-ws-close')
+      if (!exactKeys(raw, ['type', 'streamId', 'code', 'reason']) || !streamId(raw.streamId) || !isDshWebSocketCloseCode(raw.code) || (raw.reason !== undefined && !boundedString(raw.reason, 123))) return fail('invalid-ws-close')
       return { ok: true, value: { type: raw.type, streamId: raw.streamId, code: raw.code, ...(typeof raw.reason === 'string' ? { reason: raw.reason } : {}) } }
     case 'credit':
       if (!exactKeys(raw, ['type', 'streamId', 'bytes']) || !streamId(raw.streamId) || typeof raw.bytes !== 'number' || !Number.isInteger(raw.bytes) || raw.bytes < 1 || raw.bytes > DSH_TUNNEL_LIMITS.streamBufferBytes) return fail('invalid-credit')

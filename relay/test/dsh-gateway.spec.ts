@@ -409,6 +409,41 @@ describe('D2 DSH gateway', () => {
     }
   })
 
+  it('normalizes an abnormal public WebSocket teardown before forwarding it to Desktop', async () => {
+    const state = await bootstrap()
+    running.push(state.server)
+    sockets.push(state.desktop.socket, state.phone.socket, state.tunnel.socket)
+    const ticket = await issueTicket(state.phone)
+    const connected = await hostRequest(state.origin, connectPath(ticket.url), {
+      headers: { host: new URL(state.dshOrigin).host }
+    })
+    const socket = new WebSocket(`ws://127.0.0.1:${state.port}/api/events.host`, {
+      origin: state.dshOrigin,
+      headers: {
+        host: new URL(state.dshOrigin).host,
+        cookie: cookieFrom(connected)
+      }
+    })
+    sockets.push(socket)
+    await new Promise<void>((resolve, reject) => {
+      socket.once('open', resolve)
+      socket.once('error', reject)
+    })
+    const open = await state.tunnel.nextControl('ws-open')
+    if (open.type !== 'ws-open') throw new Error('wrong ws control')
+    state.tunnel.send({ type: 'ws-open-ok', streamId: open.streamId })
+
+    socket.terminate()
+    expect(await state.tunnel.nextControl('ws-close')).toMatchObject({
+      streamId: open.streamId,
+      code: 1001
+    })
+    state.tunnel.send({ type: 'ping' })
+    expect(await within('pong-after-abnormal-close', state.tunnel.nextControl('pong'))).toEqual({
+      type: 'pong'
+    })
+  })
+
   it('fails closed for anonymous routes, expired tickets, phone disconnect, generation change, and revoke', async () => {
     const state = await bootstrap({ ticketTtlMs: 20 })
     running.push(state.server)

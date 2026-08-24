@@ -8,6 +8,7 @@ import {
   DSH_TUNNEL_LIMITS,
   encodeDshTunnelBinary,
   encodeDshTunnelControl,
+  normalizeDshWebSocketCloseCode,
   parseDshTunnelBinary,
   parseDshTunnelControl,
   type DshTunnelControl,
@@ -980,7 +981,7 @@ export class DshGateway {
       this.#sendControl(seat, {
         type: 'ws-close',
         streamId: id,
-        code: code >= 1000 && code <= 4999 ? code : 1001,
+        code: normalizeDshWebSocketCloseCode(code),
         ...(reason.byteLength ? { reason: reason.toString('utf8').slice(0, 123) } : {})
       })
       this.#dropStream(stream, false)
