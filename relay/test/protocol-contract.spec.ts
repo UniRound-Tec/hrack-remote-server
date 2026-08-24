@@ -10,9 +10,7 @@ import {
   parseRemoteFrame
 } from '../src/protocol/remote-protocol.js'
 
-// f356bdc（create 帧补 cols/rows）更新了 vendored 协议文件但漏了这里的冻结哈希；
-// 7d6059… 为该提交后文件的真实 sha256，随单仓重组一并修正。
-const upstreamSha256 = '7d60591056e366e763f92922472c5818a09aabebf956530b9b732266ff618d6f'
+const upstreamSha256 = 'c265bac86068a9283df35d28e0ac4eee7fa0ac50526cd9fe10662355aa276300'
 const protocolPath = fileURLToPath(
   new URL('../src/protocol/remote-protocol.ts', import.meta.url)
 )
@@ -77,5 +75,37 @@ describe('vendored remote protocol contract', () => {
         rows: 20
       }
     })
+  })
+
+  it('forwards remote computer directory requests and responses by role', () => {
+    const request = parseRemoteFrame(
+      JSON.stringify({
+        v: 1,
+        type: 'workspace-list',
+        requestId: 'workspace-1',
+        installationId: 'codex:host',
+        path: 'C:\\Users',
+        offset: 0
+      })
+    )
+    expect(request.ok && isRemotePhoneToDesktopMessage(request.value)).toBe(true)
+
+    const response = parseRemoteFrame(
+      JSON.stringify({
+        v: 1,
+        type: 'workspace-list-ok',
+        requestId: 'workspace-1',
+        installationId: 'codex:host',
+        path: 'C:\\Users',
+        entries: [
+          {
+            name: 'Jesse',
+            path: 'C:\\Users\\Jesse',
+            kind: 'directory'
+          }
+        ]
+      })
+    )
+    expect(response.ok && isRemoteDesktopToPhoneMessage(response.value)).toBe(true)
   })
 })

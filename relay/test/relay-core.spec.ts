@@ -106,6 +106,44 @@ describe('RelayCore', () => {
     ).toEqual([
       { kind: 'send', connectionId: 'phone', message: snapshot }
     ])
+
+    const workspaceRequest = {
+      v: 1,
+      type: 'workspace-list',
+      requestId: 'workspace-1',
+      installationId: 'codex:host'
+    }
+    expect(
+      core.handleSocket({
+        type: 'text',
+        connectionId: 'phone',
+        text: JSON.stringify(workspaceRequest),
+        bufferedAmount: () => 0
+      })
+    ).toEqual([
+      { kind: 'send', connectionId: 'desktop', message: workspaceRequest }
+    ])
+
+    const workspaceResponse = {
+      v: 1,
+      type: 'workspace-list-ok',
+      requestId: 'workspace-1',
+      installationId: 'codex:host',
+      path: null,
+      entries: [
+        { name: 'Home', path: 'C:\\Users\\Jesse', kind: 'directory' }
+      ]
+    }
+    expect(
+      core.handleSocket({
+        type: 'text',
+        connectionId: 'desktop',
+        text: JSON.stringify(workspaceResponse),
+        bufferedAmount: () => 0
+      })
+    ).toEqual([
+      { kind: 'send', connectionId: 'phone', message: workspaceResponse }
+    ])
   })
 
   it('authenticates HTTP revoke and schedules revoked before close', () => {
