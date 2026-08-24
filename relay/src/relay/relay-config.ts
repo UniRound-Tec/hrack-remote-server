@@ -5,6 +5,7 @@ export interface RateLimitConfig {
 
 export interface RelayConfig {
   publicOrigin: string
+  dshPublicOrigin: string | null
   basePath: string
   allowInsecureLoopback: boolean
   serviceToken: string | null
@@ -22,10 +23,16 @@ export interface RelayConfig {
   revokeDrainMs: number
   violationWindowMs: number
   violationLimit: number
+  dshSeatTokenTtlMs: number
+  dshTicketTtlMs: number
+  dshSessionTtlMs: number
+  maxDshTunnels: number
+  maxDshSessions: number
 }
 
 const defaults: RelayConfig = {
   publicOrigin: 'https://relay.example',
+  dshPublicOrigin: null,
   basePath: '',
   allowInsecureLoopback: false,
   serviceToken: null,
@@ -42,7 +49,12 @@ const defaults: RelayConfig = {
   pongTimeoutMs: 10_000,
   revokeDrainMs: 500,
   violationWindowMs: 10_000,
-  violationLimit: 3
+  violationLimit: 3,
+  dshSeatTokenTtlMs: 10 * 60_000,
+  dshTicketTtlMs: 30_000,
+  dshSessionTtlMs: 12 * 60 * 60 * 1_000,
+  maxDshTunnels: 1_000,
+  maxDshSessions: 10_000
 }
 
 export function defaultRelayConfig(
@@ -99,9 +111,41 @@ export function validateRelayConfig(input: RelayConfig): RelayConfig {
   if (input.enableDevCreate && !loopback) {
     throw new Error('ENABLE_DEV_CREATE requires a loopback PUBLIC_ORIGIN')
   }
+  let dshPublicOrigin: string | null = null
+  if (input.dshPublicOrigin !== null) {
+    const dshUrl = new URL(input.dshPublicOrigin)
+    if (
+      dshUrl.protocol !== 'https:' ||
+      dshUrl.origin !== input.dshPublicOrigin ||
+      dshUrl.pathname !== '/' ||
+      dshUrl.search ||
+      dshUrl.hash ||
+      dshUrl.username ||
+      dshUrl.password
+    ) {
+      throw new Error('DSH_PUBLIC_ORIGIN must be a canonical HTTPS origin')
+    }
+    if (dshUrl.origin === publicUrl.origin) {
+      throw new Error('DSH_PUBLIC_ORIGIN must use an independent origin')
+    }
+    dshPublicOrigin = dshUrl.origin
+  }
+  const dshSeatTokenTtlMs = positiveInteger(
+    'DSH_SEAT_TOKEN_TTL_MS',
+    input.dshSeatTokenTtlMs
+  )
+  const dshTicketTtlMs = positiveInteger('DSH_TICKET_TTL_MS', input.dshTicketTtlMs)
+  const dshSessionTtlMs = positiveInteger('DSH_SESSION_TTL_MS', input.dshSessionTtlMs)
+  if (dshTicketTtlMs > 30_000) {
+    throw new Error('DSH_TICKET_TTL_MS must not exceed 30000')
+  }
+  if (dshSessionTtlMs > 12 * 60 * 60 * 1_000) {
+    throw new Error('DSH_SESSION_TTL_MS must not exceed 12 hours')
+  }
   return {
     ...input,
     publicOrigin: publicUrl.origin,
+    dshPublicOrigin,
     basePath: normalizeBasePath(input.basePath),
     maxRooms: positiveInteger('MAX_ROOMS', input.maxRooms),
     maxConnections: positiveInteger('MAX_CONNECTIONS', input.maxConnections),
@@ -122,7 +166,12 @@ export function validateRelayConfig(input: RelayConfig): RelayConfig {
       'VIOLATION_WINDOW_MS',
       input.violationWindowMs
     ),
-    violationLimit: positiveInteger('VIOLATION_LIMIT', input.violationLimit)
+    violationLimit: positiveInteger('VIOLATION_LIMIT', input.violationLimit),
+    dshSeatTokenTtlMs,
+    dshTicketTtlMs,
+    dshSessionTtlMs,
+    maxDshTunnels: positiveInteger('MAX_DSH_TUNNELS', input.maxDshTunnels),
+    maxDshSessions: positiveInteger('MAX_DSH_SESSIONS', input.maxDshSessions)
   }
 }
 
@@ -146,6 +195,7 @@ export function loadRelayConfig(env: NodeJS.ProcessEnv = process.env): RelayConf
   return validateRelayConfig({
     ...baseline,
     publicOrigin: env.PUBLIC_ORIGIN ?? baseline.publicOrigin,
+    dshPublicOrigin: env.DSH_PUBLIC_ORIGIN || null,
     basePath: env.BASE_PATH ?? baseline.basePath,
     allowInsecureLoopback: env.ALLOW_INSECURE_LOOPBACK === '1',
     serviceToken,
@@ -188,6 +238,23 @@ export function loadRelayConfig(env: NodeJS.ProcessEnv = process.env): RelayConf
       'VIOLATION_WINDOW_MS',
       baseline.violationWindowMs
     ),
-    violationLimit: envInteger(env, 'VIOLATION_LIMIT', baseline.violationLimit)
+    violationLimit: envInteger(env, 'VIOLATION_LIMIT', baseline.violationLimit),
+    dshSeatTokenTtlMs: envInteger(
+      env,
+      'DSH_SEAT_TOKEN_TTL_MS',
+      baseline.dshSeatTokenTtlMs
+    ),
+    dshTicketTtlMs: envInteger(
+      env,
+      'DSH_TICKET_TTL_MS',
+      baseline.dshTicketTtlMs
+    ),
+    dshSessionTtlMs: envInteger(
+      env,
+      'DSH_SESSION_TTL_MS',
+      baseline.dshSessionTtlMs
+    ),
+    maxDshTunnels: envInteger(env, 'MAX_DSH_TUNNELS', baseline.maxDshTunnels),
+    maxDshSessions: envInteger(env, 'MAX_DSH_SESSIONS', baseline.maxDshSessions)
   })
 }

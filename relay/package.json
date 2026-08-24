@@ -21,6 +21,8 @@
     "verify:durable-recovery": "node scripts/durable-recovery-verify.mjs",
     "verify:deployed": "node scripts/deployed-verify.mjs",
     "verify:tls": "tsx scripts/tls-live-verify.ts",
+    "preverify:dsh-d2": "npm run build:server",
+    "verify:dsh-d2": "tsx scripts/dsh-d2-blackbox.ts",
     "load:gate": "tsx scripts/load-gate.ts"
   },
   "dependencies": {

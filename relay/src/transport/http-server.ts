@@ -11,6 +11,7 @@ import { extname, resolve, sep } from 'node:path'
 
 import WebSocket, { WebSocketServer, type RawData } from 'ws'
 
+import { DshGateway } from '../dsh/DshGateway.js'
 import {
   RelayCore,
   type DesiredRoom,
@@ -139,9 +140,15 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
   let appliedSnapshotHash: string | null = null
   const sockets = new Map<string, WebSocket>()
   const drainTimers = new Set<NodeJS.Timeout>()
+  const dshGateway = new DshGateway(config)
   const core = new RelayCore(config, {
     now: Date.now,
-    randomBytes: (size) => systemRandomBytes(size)
+    randomBytes: (size) => systemRandomBytes(size),
+    decorateHelloOk: (input) => dshGateway.decorateHelloOk(input),
+    issueDshTicket: (input) => dshGateway.issueTicket(input),
+    observeDesktopMessage: (input) => dshGateway.observeDesktopMessage(input),
+    onConnectionClosed: (input) => dshGateway.onConnectionClosed(input),
+    onRoomRevoked: (roomId) => dshGateway.revokeRoom(roomId)
   })
   const webRoot = resolve(
     options.webRoot ??
@@ -267,6 +274,10 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
 
   const httpServer = createServer(async (request, response) => {
     try {
+      if (dshGateway.isPublicHost(request)) {
+        await dshGateway.handlePublicHttp(request, response)
+        return
+      }
       const url = new URL(request.url ?? '/', 'http://relay.invalid')
       const path = url.pathname
       if (request.method === 'GET' && path === `${base}/healthz`) {
@@ -562,6 +573,9 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
   })
 
   httpServer.on('upgrade', (request, socket, head) => {
+    if (dshGateway.handleUpgrade(request, socket, head, `${base}/v1/dsh-tunnel`)) {
+      return
+    }
     let path: string
     try {
       path = new URL(request.url ?? '/', 'http://relay.invalid').pathname
@@ -657,6 +671,7 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
         drainTimers.clear()
         for (const socket of sockets.values()) socket.terminate()
         sockets.clear()
+        dshGateway.close()
         await new Promise<void>((resolve, reject) => {
           httpServer.close((error) => (error ? reject(error) : resolve()))
         })

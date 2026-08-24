@@ -10,7 +10,7 @@ import {
   parseRemoteFrame
 } from '../src/protocol/remote-protocol.js'
 
-const upstreamSha256 = 'c265bac86068a9283df35d28e0ac4eee7fa0ac50526cd9fe10662355aa276300'
+const upstreamSha256 = 'f41b2fc74e49babe90273e70fd38bb3dd214b43df357390000678cab29281b25'
 const protocolPath = fileURLToPath(
   new URL('../src/protocol/remote-protocol.ts', import.meta.url)
 )
@@ -107,5 +107,23 @@ describe('vendored remote protocol contract', () => {
       })
     )
     expect(response.ok && isRemoteDesktopToPhoneMessage(response.value)).toBe(true)
+  })
+
+  it('parses DSH ticket controls without forwarding the request to Desktop', () => {
+    const request = parseRemoteFrame(JSON.stringify({
+      v: 1,
+      type: 'dsh-ticket-request',
+      requestId: 'ticket-1'
+    }))
+    expect(request).toMatchObject({ ok: true })
+    expect(request.ok && isRemotePhoneToDesktopMessage(request.value)).toBe(false)
+
+    expect(parseRemoteFrame(JSON.stringify({
+      v: 1,
+      type: 'dsh-ticket-ok',
+      requestId: 'ticket-1',
+      url: 'https://dsh.example/_connect/opaque',
+      expiresAt: 1_800_000_000_000
+    }))).toMatchObject({ ok: true })
   })
 })

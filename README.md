@@ -8,6 +8,7 @@ HRack 平台单仓库：**web**（平台站，Next.js 16）+ **relay**（远程�
                         ├─ /remote、/remote/        → /dashboard
                         └─ /remote/{roomId}、/remote/v1/ws → relay (Node, :3000)
 HRack 桌面端 ── 粘贴配对URL / 手机端扫码 ──┘（协议不变）
+dsh.hrack.example ──► Relay DSH Gateway ──独立 WSS tunnel──► Desktop loopback DSH
 ```
 
 ## 目录
@@ -36,6 +37,7 @@ npm run typecheck    # relay + web
 npm run test         # relay + web 单测/黑盒
 npm run build        # relay 产物 + web standalone 产物
 npm run e2e          # relay Playwright
+npm --prefix relay run verify:dsh-d2 # 构建后真实进程的 DSH HTTP/WS/ticket 门禁
 npm run test:ops     # 备份/监控运维模块
 ```
 
@@ -49,8 +51,8 @@ docker compose config --quiet
 docker compose --profile edge up -d --build --wait
 ```
 
-不想要 compose 自带 nginx 时，去掉 `--profile edge`，用宿主反代按
-`deploy/nginx.routes.conf` 复刻 `/` 与 `/remote/` 分流。完整的 TLS、备份、恢复和升级
+不想要 compose 自带 nginx 时，使用 `--profile host-edge`：平台域名转到 8788，独立 DSH
+域名转到 8789；不要把两者合并成一个 path proxy。完整的 TLS、备份、恢复和升级
 步骤见 `docs/DEPLOYMENT.md`。
 
 ### 真实恢复门禁

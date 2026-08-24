@@ -7,8 +7,8 @@
 ## 1. 前提
 
 - Linux 主机、Docker Engine 与 Docker Compose v2；
-- 一个解析到该主机的域名；
-- 对应域名的 TLS `fullchain.pem` 与 `privkey.pem`；
+- 平台域名；启用 DSH Web Tunnel 时再准备一个解析到同一主机的独立域名；
+- 对应域名的 TLS `fullchain.pem` 与 `privkey.pem`（启用 DSH 时证书须覆盖两个域名，或分别配置）；
 - 只运行一个 Relay 副本；
 - 防火墙只向公网开放 80/443，Web 与 Relay 不直接暴露。
 
@@ -26,6 +26,7 @@ cp .env.example .env
 ```dotenv
 COMPOSE_PROJECT_NAME=hrack
 PUBLIC_ORIGIN=https://remote.example.com
+DSH_PUBLIC_ORIGIN=https://dsh.remote.example.com
 RELAY_SERVICE_TOKEN=<openssl rand -hex 32>
 BETTER_AUTH_SECRET=<openssl rand -hex 32>
 PAIRING_ENC_KEY=<openssl rand -base64 32>
@@ -44,6 +45,8 @@ SETTINGS_ENC_KEY=<openssl rand -base64 32>
 
 `ENABLE_DEV_CREATE` 必须为空。生产不要设置 `ALLOW_INSECURE_LOOPBACK`。`PUBLIC_ORIGIN`
 必须只有 `https://` scheme 和 authority，不能带路径，也必须与浏览器最终访问 origin 一致。
+`DSH_PUBLIC_ORIGIN` 同样只能是规范 HTTPS origin，且必须与 `PUBLIC_ORIGIN` 不同；留空会关闭
+DSH Web Tunnel，不会猜测 `dsh.<PUBLIC_ORIGIN>`。
 
 ### TLS 与域名
 
@@ -54,8 +57,10 @@ deploy/certs/fullchain.pem
 deploy/certs/privkey.pem
 ```
 
-将 `nginx.hrack.conf.example` 中的 `server_name hrack.example` 改为真实域名。80 端口只做
-HTTPS 跳转，443 端口加载 `nginx.routes.conf` 中生产与真实门禁共用的路由策略。
+将 `nginx.hrack.conf.example` 中的 `server_name hrack.example` 和
+`server_name dsh.hrack.example` 改为两个真实域名。80 端口只做 HTTPS 跳转；平台 443
+加载 `nginx.routes.conf`，DSH 443 加载 `nginx.dsh.routes.conf`。后者全量关闭 access log，
+保留长 HTTP/SSE/WebSocket 流，并由 Relay 再次执行 Cookie 和 route allowlist。
 
 ## 3. 从零启动
 
@@ -135,6 +140,9 @@ token、Cookie 或协议 payload。
 | `/remote/v1/system/*` | 404 |
 | `/remote/demo/*` | 404 |
 
+独立 `DSH_PUBLIC_ORIGIN` 不复用这张路径表：它只进入 Relay DSH Gateway，匿名仅允许
+`GET /_healthz`；ticket、Cookie、完整 API path 和正文不得进入任何上层访问日志。
+
 `/remote/` 整段关闭 access log，因为 URL 路径包含 roomId。认证、管理与 dashboard 路径
 同样关闭 access log。不要在 CDN、WAF 或上层负载均衡重新记录完整 `/remote/*` 请求 URI。
 
@@ -144,11 +152,12 @@ token、Cookie 或协议 payload。
 docker compose --profile host-edge up -d --build --wait
 ```
 
-`host-edge` 仍复用 `nginx.routes.conf`，只在 `127.0.0.1:${HOST_EDGE_PORT:-8788}` 暴露一个
-HTTP 端口。宿主反代把整个站点转到该端口，并传递 `Host`、`X-Forwarded-Proto`、
+`host-edge` 仍复用 `nginx.routes.conf`，在 `127.0.0.1:${HOST_EDGE_PORT:-8788}` 暴露平台
+HTTP 端口；`dsh-host-edge` 在 `127.0.0.1:${DSH_HOST_EDGE_PORT:-8789}` 暴露只通 Relay 的
+DSH 端口。宿主反代按两个域名分别转到对应端口，并传递 `Host`、`X-Forwarded-Proto`、
 `X-Real-IP` 和 WebSocket Upgrade；不要分别手抄 Web/Relay 路由，也不要把容器 3000/3001
-端口直接暴露。`host-edge` 会保留外层 HTTPS 信息，因此 Secure Cookie 和回跳 origin 不会
-被内层 HTTP 连接降级。内部 `/remote/v1/system/*` 始终由共用路由返回 404。
+端口直接暴露。两个入口都保留原始 Host；DSH Gateway 据此拒绝把平台根路径误当 DSH。
+内部 `/remote/v1/system/*` 始终由共用路由返回 404。
 
 ## 7. 备份
 
@@ -318,6 +327,11 @@ sticky session 掩盖多个独立内存 authority。
 | `PING_INTERVAL_MS` | 30000 |
 | `PONG_TIMEOUT_MS` | 10000 |
 | `REVOKE_DRAIN_MS` | 500 |
+
+DSH 另有独立 tunnel 配额：16 个 HTTP、1 条 SSE、2 条 event WebSocket，16 MiB request、
+32 MiB普通 response、512 KiB/stream 和 2 MiB/room 未消费缓冲。部署前可用
+`npm --prefix relay run verify:dsh-d2` 启动构建后真实进程验证 4.54 MB HTTP、两条 WS、
+ticket 重放、吊销与日志边界；这不替代后续手机公网真实 DSH 门禁。
 
 这些是拒绝上限，不是机器容量结论。上线前按目标机器运行 `relay` 的 load gate 并保存报告；
 不要仅因容器 healthy 就宣称容量达标。

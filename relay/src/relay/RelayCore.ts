@@ -4,6 +4,9 @@ import {
   isRemoteDesktopToPhoneMessage,
   isRemotePhoneToDesktopMessage,
   parseRemoteFrame,
+  type RemoteDshTicketOk,
+  type RemoteDshTicketReject,
+  type RemoteHelloOk,
   type RemoteMessage,
   type RemoteRole
 } from '../protocol/remote-protocol.js'
@@ -13,6 +16,27 @@ import type { RateLimitConfig } from './relay-config.js'
 export interface RelayDependencies {
   now(): number
   randomBytes(size: number): Uint8Array
+  decorateHelloOk?(input: {
+    connectionId: string
+    roomId: string
+    role: RemoteRole
+  }): Pick<RemoteHelloOk, 'relayCapabilities' | 'dshSeatToken'>
+  issueDshTicket?(input: {
+    connectionId: string
+    roomId: string
+    requestId: string
+  }): RemoteDshTicketOk | RemoteDshTicketReject
+  observeDesktopMessage?(input: {
+    connectionId: string
+    roomId: string
+    message: RemoteMessage
+  }): void
+  onConnectionClosed?(input: {
+    connectionId: string
+    roomId: string | null
+    role: RemoteRole | null
+  }): void
+  onRoomRevoked?(roomId: string): void
 }
 
 export type CreateRoomResult =
@@ -280,6 +304,29 @@ export class RelayCore {
       return this.#revokeOpenRoom(connection.roomId, room)
     }
 
+    if (message.type === 'dsh-ticket-request') {
+      if (connection.role !== 'phone' || !this.dependencies.issueDshTicket) {
+        return this.#violate(connection)
+      }
+      return [{
+        kind: 'send',
+        connectionId: connection.id,
+        message: this.dependencies.issueDshTicket({
+          connectionId: connection.id,
+          roomId: connection.roomId,
+          requestId: message.requestId
+        })
+      }]
+    }
+
+    if (connection.role === 'desktop') {
+      this.dependencies.observeDesktopMessage?.({
+        connectionId: connection.id,
+        roomId: connection.roomId,
+        message
+      })
+    }
+
     const allowed =
       connection.role === 'desktop'
         ? isRemoteDesktopToPhoneMessage(message)
@@ -306,7 +353,7 @@ export class RelayCore {
       if (connection.roomId === roomId && connection.role === role) {
         const room = this.#rooms.get(roomId)
         if (room?.status === 'open') {
-          return [this.#helloOk(connection.id, room)]
+          return [this.#helloOk(connection, room)]
         }
       }
       return [{ kind: 'send', connectionId: connection.id, message: { v: 1, type: 'occupied' } }]
@@ -351,7 +398,7 @@ export class RelayCore {
     room[role] = connection.id
     connection.roomId = roomId
     connection.role = role
-    const effects: RelayEffect[] = [this.#helloOk(connection.id, room)]
+    const effects: RelayEffect[] = [this.#helloOk(connection, room)]
     const peerRole = role === 'desktop' ? 'phone' : 'desktop'
     const peerId = room[peerRole]
     if (peerId !== null) {
@@ -364,15 +411,27 @@ export class RelayCore {
     return effects
   }
 
-  #helloOk(connectionId: string, room: OpenRoom): RelayEffect {
+  #helloOk(connection: Connection, room: OpenRoom): RelayEffect {
+    const extension = connection.role && connection.roomId
+      ? this.dependencies.decorateHelloOk?.({
+          connectionId: connection.id,
+          roomId: connection.roomId,
+          role: connection.role
+        })
+      : undefined
+    const message: RemoteHelloOk = {
+      v: 1,
+      type: 'hello-ok',
+      peer: { desktop: room.desktop !== null, phone: room.phone !== null }
+    }
+    if (extension?.relayCapabilities) {
+      message.relayCapabilities = extension.relayCapabilities
+    }
+    if (extension?.dshSeatToken) message.dshSeatToken = extension.dshSeatToken
     return {
       kind: 'send',
-      connectionId,
-      message: {
-        v: 1,
-        type: 'hello-ok',
-        peer: { desktop: room.desktop !== null, phone: room.phone !== null }
-      }
+      connectionId: connection.id,
+      message
     }
   }
 
@@ -395,6 +454,7 @@ export class RelayCore {
   }
 
   #closeRoomForBackpressure(roomId: string, room: OpenRoom): RelayEffect[] {
+    this.dependencies.onRoomRevoked?.(roomId)
     const effects: RelayEffect[] = []
     for (const connectionId of [room.desktop, room.phone]) {
       if (connectionId === null) continue
@@ -418,6 +478,11 @@ export class RelayCore {
     const connection = this.#connections.get(connectionId)
     if (!connection) return []
     this.#connections.delete(connectionId)
+    this.dependencies.onConnectionClosed?.({
+      connectionId,
+      roomId: connection.roomId,
+      role: connection.role
+    })
     if (connection.roomId === null || connection.role === null) return []
     const room = this.#rooms.get(connection.roomId)
     if (!room || room.status !== 'open') return []
@@ -478,6 +543,7 @@ export class RelayCore {
   }
 
   #revokeOpenRoom(roomId: string, room: OpenRoom): RelayEffect[] {
+    this.dependencies.onRoomRevoked?.(roomId)
     this.#rooms.set(roomId, {
       status: 'revoked',
       revokeDigest: room.revokeDigest

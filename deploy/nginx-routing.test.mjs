@@ -11,6 +11,12 @@ const verifyConfig = fs
 const routes = fs
   .readFileSync(new URL('./nginx.routes.conf', import.meta.url), 'utf8')
   .replace(/^\s*#.*$/gm, '')
+const dshRoutes = fs
+  .readFileSync(new URL('./nginx.dsh.routes.conf', import.meta.url), 'utf8')
+  .replace(/^\s*#.*$/gm, '')
+const dshHostEdge = fs
+  .readFileSync(new URL('./nginx.dsh-host-edge.conf', import.meta.url), 'utf8')
+  .replace(/^\s*#.*$/gm, '')
 const compose = fs.readFileSync(
   new URL('./docker-compose.yml', import.meta.url),
   'utf8'
@@ -122,4 +128,20 @@ test('mounts one shared route policy in production and the local P4 gate', () =>
     verifyCompose,
     /^      - \.\/nginx\.routes\.conf:\/etc\/nginx\/hrack\.routes\.conf:ro\s*$/m
   )
+})
+
+test('gives the DSH Web surface an independent no-log streaming virtual host', () => {
+  assert.match(edgeConfig, /server_name\s+dsh\.hrack\.example;/)
+  assert.match(edgeConfig, /include\s+\/etc\/nginx\/hrack\.dsh\.routes\.conf;/)
+  assert.match(dshHostEdge, /include\s+\/etc\/nginx\/hrack\.dsh\.routes\.conf;/)
+  assert.match(dshRoutes, /access_log\s+off;/)
+  assert.match(dshRoutes, /proxy_pass\s+http:\/\/relay:3000;/)
+  assert.match(dshRoutes, /proxy_set_header\s+Host\s+\$http_host;/)
+  assert.match(dshRoutes, /proxy_set_header\s+Upgrade\s+\$http_upgrade;/)
+  assert.match(dshRoutes, /proxy_set_header\s+Connection\s+\$connection_upgrade;/)
+  assert.match(dshRoutes, /proxy_request_buffering\s+off;/)
+  assert.match(dshRoutes, /proxy_buffering\s+off;/)
+  assert.match(compose, /^      DSH_PUBLIC_ORIGIN: \$\{DSH_PUBLIC_ORIGIN:-\}\s*$/m)
+  assert.match(compose, /127\.0\.0\.1:\$\{DSH_HOST_EDGE_PORT:-8789\}:80/)
+  assert.match(compose, /nginx\.dsh-host-edge\.conf:\/etc\/nginx\/conf\.d\/default\.conf:ro/)
 })

@@ -2,7 +2,7 @@
 # 用法：
 #   docker compose up -d --build                # relay + web + 协调器 + 监控
 #   docker compose --profile edge up -d --build      # 连同 TLS nginx（80/443）
-#   docker compose --profile host-edge up -d --build # 给宿主反代的 loopback 单端口
+#   docker compose --profile host-edge up -d --build # 给宿主反代的平台/DSH 两个 loopback 端口
 # 密钥类环境变量放在同目录 .env（见下方 environment 注释），不要写进本文件。
 #
 # 端口约定（PAIRING-PLATFORM-SPEC §4）：
@@ -22,6 +22,8 @@ services:
     environment:
       # 对外可见源，决定 joinUrl 拼接；带上 nginx/反代 对外的 https 域名
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?set in .env}
+      # DSH 官方 Web UI 的独立 HTTPS origin；留空即不发布 capability。
+      DSH_PUBLIC_ORIGIN: ${DSH_PUBLIC_ORIGIN:-}
       BASE_PATH: /remote
       # 服务凭证：内部创建、吊销与期望状态同步；未设置时创建一律 401
       RELAY_SERVICE_TOKEN: ${RELAY_SERVICE_TOKEN:?set in .env}
@@ -196,6 +198,7 @@ services:
     volumes:
       - ./nginx.hrack.conf.example:/etc/nginx/conf.d/default.conf:ro
       - ./nginx.routes.conf:/etc/nginx/hrack.routes.conf:ro
+      - ./nginx.dsh.routes.conf:/etc/nginx/hrack.dsh.routes.conf:ro
       # 证书路径按实际环境替换
       - ./certs:/etc/nginx/certs:ro
     restart: unless-stopped
@@ -215,6 +218,22 @@ services:
     volumes:
       - ./nginx.host-edge.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx.routes.conf:/etc/nginx/hrack.routes.conf:ro
+    restart: unless-stopped
+    logging: *bounded-logs
+
+  # 外层宿主反代把 DSH 独立域名转到另一个 loopback 端口，避免与平台根路径混流。
+  dsh-host-edge:
+    image: nginx:1.27-bookworm
+    profiles:
+      - host-edge
+    depends_on:
+      relay:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${DSH_HOST_EDGE_PORT:-8789}:80"
+    volumes:
+      - ./nginx.dsh-host-edge.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx.dsh.routes.conf:/etc/nginx/hrack.dsh.routes.conf:ro
     restart: unless-stopped
     logging: *bounded-logs
 
