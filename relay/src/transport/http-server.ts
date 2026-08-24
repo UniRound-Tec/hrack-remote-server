@@ -11,7 +11,7 @@ import { extname, resolve, sep } from 'node:path'
 
 import WebSocket, { WebSocketServer, type RawData } from 'ws'
 
-import { DshGateway } from '../dsh/DshGateway.js'
+import { DshGateway, type DshGatewayMetrics } from '../dsh/DshGateway.js'
 import {
   RelayCore,
   type DesiredRoom,
@@ -40,6 +40,7 @@ export interface RelayServerOptions {
 export interface RunningRelayServer {
   listen(port: number, host?: string): Promise<void>
   close(): Promise<void>
+  metrics(): { dsh: DshGatewayMetrics }
 }
 
 const NO_STORE = { 'cache-control': 'no-store' }
@@ -663,6 +664,7 @@ export function createRelayServer(options: RelayServerOptions): RunningRelayServ
           resolve()
         })
       }),
+    metrics: () => ({ dsh: dshGateway.metrics() }),
     close: () => {
       if (closePromise) return closePromise
       closePromise = (async () => {

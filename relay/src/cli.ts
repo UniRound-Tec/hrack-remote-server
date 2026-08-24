@@ -54,6 +54,7 @@ const metrics = setInterval(() => {
     heapUsedMiB: Number((memory.heapUsed / 1_048_576).toFixed(1)),
     eventLoopDelayP99Ms: Number((eventLoopDelay.percentile(99) / 1_000_000).toFixed(2)),
     eventLoopUtilization: Number(utilization.utilization.toFixed(4)),
+    ...server.metrics(),
     at: new Date().toISOString()
   })
   eventLoopDelay.reset()

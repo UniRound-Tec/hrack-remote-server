@@ -132,6 +132,7 @@ services:
       context: ../ops
     environment:
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?set in .env}
+      DSH_PUBLIC_ORIGIN: ${DSH_PUBLIC_ORIGIN:-}
       WEB_INTERNAL_ORIGIN: http://web:3000
       RELAY_INTERNAL_ORIGIN: http://relay:3000
       RECONCILER_HEALTH_URL: http://pairing-reconciler:3001/healthz

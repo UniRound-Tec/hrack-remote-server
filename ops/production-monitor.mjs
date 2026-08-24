@@ -135,6 +135,22 @@ export async function checkProductionHealth(options) {
   checks.push(await timedCheck('demo-hidden', () =>
     expectResponse(fetcher, new URL('/remote/demo/', origin), {}, 404), now))
 
+  if (options.dshPublicOrigin) {
+    const dshOrigin = asOrigin(options.dshPublicOrigin, 'dshPublicOrigin')
+    if (dshOrigin.protocol === 'https:') {
+      checks.push(await timedCheck('public-dsh-tls', () =>
+        inspectTls(dshOrigin, minimumTlsDays, options.tlsConnect), now))
+    }
+    checks.push(await timedCheck('public-dsh-health', () =>
+      expectResponse(
+        fetcher,
+        new URL('/_healthz', dshOrigin),
+        {},
+        200,
+        dshOrigin.protocol === 'https:' ? ['strict-transport-security'] : []
+      ), now))
+  }
+
   if (options.webInternalOrigin) {
     const webOrigin = asOrigin(options.webInternalOrigin, 'webInternalOrigin')
     checks.push(await timedCheck('internal-web', () =>
@@ -201,6 +217,16 @@ export function productionConfigChecks(env, origin) {
     {
       name: 'anonymous-debug-create-disabled',
       ok: !env.ENABLE_DEV_CREATE
+    },
+    {
+      name: 'dsh-public-origin-configured',
+      ok: (() => {
+        try {
+          return asOrigin(env.DSH_PUBLIC_ORIGIN ?? '', 'DSH_PUBLIC_ORIGIN').protocol === 'https:'
+        } catch {
+          return false
+        }
+      })()
     }
   ]
   return checks.map((check) => ({
@@ -247,6 +273,7 @@ async function deliverAlert(message, env = process.env, fetcher = fetch) {
 function optionsFromEnv(env) {
   return {
     origin: env.PUBLIC_ORIGIN,
+    dshPublicOrigin: env.DSH_PUBLIC_ORIGIN,
     webInternalOrigin: env.WEB_INTERNAL_ORIGIN,
     relayInternalOrigin: env.RELAY_INTERNAL_ORIGIN,
     reconcilerHealthUrl: env.RECONCILER_HEALTH_URL,

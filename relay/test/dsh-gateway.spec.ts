@@ -195,6 +195,68 @@ async function issueTicket(phone: JsonClient, requestId = 'ticket-1') {
   return await phone.next() as { type: string; requestId: string; url: string; expiresAt: number }
 }
 
+async function synchronizeRoom(input: {
+  origin: string
+  serviceToken: string
+  roomId: string
+  revision?: number
+}): Promise<void> {
+  const response = await hostRequest(input.origin, '/v1/system/rooms', {
+    method: 'PUT',
+    headers: {
+      authorization: `Bearer ${input.serviceToken}`,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      revision: input.revision ?? 1,
+      rooms: [{
+        roomId: input.roomId,
+        revokeDigest: Buffer.alloc(32, 0x5a).toString('base64url')
+      }]
+    })
+  })
+  expect(response.status).toBe(200)
+}
+
+async function connectRestoredRoom(input: {
+  port: number
+  origin: string
+  dshOrigin: string
+  roomId: string
+}) {
+  const mainUrl = `ws://127.0.0.1:${input.port}/v1/ws`
+  const desktop = await JsonClient.connect(mainUrl)
+  const phone = await JsonClient.connect(mainUrl)
+  desktop.send({ v: 1, type: 'hello', role: 'desktop', roomId: input.roomId })
+  const desktopHello = await desktop.next() as { dshSeatToken: string }
+  phone.send({ v: 1, type: 'hello', role: 'phone', roomId: input.roomId })
+  expect(await phone.next()).toMatchObject({ v: 1, type: 'hello-ok' })
+  await desktop.next()
+  const tunnel = await TunnelClient.connect(`ws://127.0.0.1:${input.port}/v1/dsh-tunnel`)
+  tunnel.send({
+    type: 'dsh-tunnel-hello',
+    roomId: input.roomId,
+    dshSeatToken: desktopHello.dshSeatToken,
+    protocol: 1
+  })
+  tunnel.send({ type: 'ping' })
+  await tunnel.nextControl('pong')
+  desktop.send({
+    v: 1,
+    type: 'dsh-surface-state',
+    surface: {
+      id: 'dsh',
+      kind: 'dsh-web',
+      displayName: 'DeepSeek Harness',
+      iconId: 'dsh',
+      state: 'ready',
+      generation: 1
+    }
+  })
+  await phone.next()
+  return { desktop, phone, tunnel }
+}
+
 function connectPath(url: string): string {
   return new URL(url).pathname
 }
@@ -407,6 +469,75 @@ describe('D2 DSH gateway', () => {
       }))
       expect(await message).toBe(`event:${path}`)
     }
+
+    const metrics = state.server.metrics().dsh
+    expect(metrics).toMatchObject({
+      healthy: true,
+      activeTunnels: 1,
+      pendingTunnels: 0,
+      activeWebSessions: 1,
+      activeHttpStreams: 0,
+      activeWebSocketStreams: 2,
+      bufferedBytes: 0,
+      errors: { buffer: 0, timeout: 0, protocol: 0, transport: 0, upstream: 0 }
+    })
+    expect(metrics.bytesPublicToDesktop).toBeGreaterThan(0)
+    expect(metrics.bytesDesktopToPublic).toBeGreaterThan(0)
+    expect(JSON.stringify(metrics)).not.toMatch(/room|cookie|ticket|path|body|secret/i)
+  })
+
+  it('restores a persistent room without reviving pre-restart DSH tickets or cookies', async () => {
+    const port = await unusedPort()
+    const origin = `http://127.0.0.1:${port}`
+    const dshOrigin = 'https://dsh.restore.example'
+    const serviceToken = 'dsh-restore-service-token-at-least-32-bytes'
+    const roomId = Buffer.alloc(16, 0x42).toString('base64url')
+    const config = defaultRelayConfig({
+      publicOrigin: origin,
+      dshPublicOrigin: dshOrigin,
+      serviceToken,
+      allowInsecureLoopback: true,
+      enableDevCreate: false
+    })
+    const start = async (): Promise<RunningRelayServer> => {
+      const server = createRelayServer({ config })
+      await server.listen(port)
+      await synchronizeRoom({ origin, serviceToken, roomId })
+      return server
+    }
+
+    const first = await start()
+    running.push(first)
+    const firstSeats = await connectRestoredRoom({ port, origin, dshOrigin, roomId })
+    sockets.push(firstSeats.desktop.socket, firstSeats.phone.socket, firstSeats.tunnel.socket)
+    const oldTicket = await issueTicket(firstSeats.phone, 'old-ticket')
+    const cookieTicket = await issueTicket(firstSeats.phone, 'old-cookie')
+    const connected = await hostRequest(origin, connectPath(cookieTicket.url), {
+      headers: { host: new URL(dshOrigin).host }
+    })
+    expect(connected.status).toBe(303)
+    const oldCookie = cookieFrom(connected)
+
+    await first.close()
+    running.pop()
+
+    const restarted = await start()
+    running.push(restarted)
+    const authority = new URL(dshOrigin).host
+    expect((await hostRequest(origin, connectPath(oldTicket.url), {
+      headers: { host: authority }
+    })).status).toBe(404)
+    expect((await hostRequest(origin, '/', {
+      headers: { host: authority, cookie: oldCookie }
+    })).status).toBe(401)
+
+    const restoredSeats = await connectRestoredRoom({ port, origin, dshOrigin, roomId })
+    sockets.push(restoredSeats.desktop.socket, restoredSeats.phone.socket, restoredSeats.tunnel.socket)
+    const newTicket = await issueTicket(restoredSeats.phone, 'new-ticket')
+    expect(connectPath(newTicket.url)).not.toBe(connectPath(oldTicket.url))
+    expect((await hostRequest(origin, connectPath(newTicket.url), {
+      headers: { host: authority }
+    })).status).toBe(303)
   })
 
   it('normalizes an abnormal public WebSocket teardown before forwarding it to Desktop', async () => {
@@ -576,6 +707,7 @@ describe('D2 DSH gateway', () => {
     const closed = new Promise<number>((resolve) => state.tunnel.socket.once('close', (code) => resolve(code)))
     state.tunnel.sendBinary(open.streamId, 0, 'body-before-head')
     expect(await within('protocol-close', closed)).toBe(1002)
+    expect(state.server.metrics().dsh.errors.protocol).toBe(1)
     await request
   })
 })

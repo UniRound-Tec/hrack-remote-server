@@ -272,9 +272,10 @@ npm run verify:p4-deployment
 
 ## 11. 健康监控、告警与日志轮转
 
-Compose 默认启动 `production-monitor`。它每 30 秒检查公网 TLS/HTTPS、公开安全边界、
-内部 Web/Relay 和 `pairing-reconciler` 的独立健康接口；连续 3 次失败才告警，恢复后只通知
-一次。协调器从最近一次成功开始超过 `max(30 秒, 3 × 校准周期)` 会变为 unhealthy。
+Compose 默认启动 `production-monitor`。它每 30 秒检查平台公网 TLS/HTTPS、公开安全边界、
+`DSH_PUBLIC_ORIGIN` 的受信 TLS 与 `/_healthz`、内部 Web/Relay 和 `pairing-reconciler` 的独立
+健康接口；连续 3 次失败才告警，恢复后只通知一次。协调器从最近一次成功开始超过
+`max(30 秒, 3 × 校准周期)` 会变为 unhealthy。
 
 至少配置一个独立接收端：
 
@@ -305,7 +306,7 @@ npm run verify:p5-release -- --origin https://hrack.modplex.app
 
 在生产主机加载受控 `.env` 后，可设置 `P5_REQUIRE_PRODUCTION_CONFIG=1` 再运行；它只报告
 配置项是否存在，不输出值，并额外检查强制验证、Resend 发件域、告警接收端、setup token
-已删除及匿名调试开关关闭。正式清单见
+已删除、匿名调试开关关闭及 DSH 独立 HTTPS origin 已配置。正式清单见
 [`PAIRING-P5-RELEASE-CHECKLIST.md`](./PAIRING-P5-RELEASE-CHECKLIST.md)。
 
 ## 12. Relay 运行限制与容量
@@ -332,6 +333,13 @@ DSH 另有独立 tunnel 配额：64 个 HTTP、1 条 SSE、2 条 event WebSocket
 32 MiB普通 response、512 KiB/stream 和 2 MiB/room 未消费缓冲。部署前可用
 `npm --prefix relay run verify:dsh-d2` 启动构建后真实进程验证 4.54 MB HTTP、两条 WS、
 ticket 重放、吊销与日志边界；这不替代后续手机公网真实 DSH 门禁。
+
+Relay 的 `runtime-metrics` 另带 `dsh` 对象，只包含 gateway health、活动 tunnel/session、
+HTTP/WS 并发数、当前缓冲字节、双向累计字节，以及 `buffer`/`timeout`/`protocol`/
+`transport`/`upstream` 五类累计错误计数。该对象禁止加入 origin、path、room、ticket、Cookie、
+请求/响应正文或任何用户标识。备份恢复门禁把数据库 `integrity_check` 与 Relay 重启测试组合：
+持久房间恢复后旧 DSH ticket 必须为 404、旧 Cookie 必须为 401，新 seat 签发的新 ticket 才能
+得到 303；任何把 ticket/Cookie 落入备份的实现都不合格。
 
 这些是拒绝上限，不是机器容量结论。上线前按目标机器运行 `relay` 的 load gate 并保存报告；
 不要仅因容器 healthy 就宣称容量达标。

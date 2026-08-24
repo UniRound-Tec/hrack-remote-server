@@ -29,6 +29,27 @@ interface DshGatewayDependencies {
   randomBytes(size: number): Uint8Array
 }
 
+export interface DshGatewayMetrics {
+  healthy: boolean
+  activeTunnels: number
+  pendingTunnels: number
+  activeWebSessions: number
+  activeHttpStreams: number
+  activeWebSocketStreams: number
+  bufferedBytes: number
+  bytesPublicToDesktop: number
+  bytesDesktopToPublic: number
+  errors: {
+    buffer: number
+    timeout: number
+    protocol: number
+    transport: number
+    upstream: number
+  }
+}
+
+type DshErrorCategory = keyof DshGatewayMetrics['errors']
+
 interface DesktopSeat {
   roomId: string
   connectionId: string
@@ -281,6 +302,15 @@ export class DshGateway {
   })
   #nextStreamId = 1
   #pendingTunnels = 0
+  #bytesPublicToDesktop = 0
+  #bytesDesktopToPublic = 0
+  readonly #errors: DshGatewayMetrics['errors'] = {
+    buffer: 0,
+    timeout: 0,
+    protocol: 0,
+    transport: 0,
+    upstream: 0
+  }
   readonly #pruner: NodeJS.Timeout
 
   constructor(
@@ -300,6 +330,33 @@ export class DshGateway {
 
   get enabled(): boolean {
     return this.#publicOrigin !== null
+  }
+
+  metrics(): DshGatewayMetrics {
+    let activeHttpStreams = 0
+    let activeWebSocketStreams = 0
+    let bufferedBytes = 0
+    for (const stream of this.#streams.values()) {
+      if (stream.kind === 'http') {
+        activeHttpStreams += 1
+        bufferedBytes += stream.requestFlow.queuedBytes + stream.responseUnconsumed
+      } else {
+        activeWebSocketStreams += 1
+        bufferedBytes += stream.unconsumed
+      }
+    }
+    return {
+      healthy: this.enabled,
+      activeTunnels: this.#activeTunnelCount(),
+      pendingTunnels: this.#pendingTunnels,
+      activeWebSessions: this.#sessions.size,
+      activeHttpStreams,
+      activeWebSocketStreams,
+      bufferedBytes,
+      bytesPublicToDesktop: this.#bytesPublicToDesktop,
+      bytesDesktopToPublic: this.#bytesDesktopToPublic,
+      errors: { ...this.#errors }
+    }
   }
 
   isPublicHost(request: IncomingMessage): boolean {
@@ -508,9 +565,15 @@ export class DshGateway {
       stream.requestFlow.ended = true
       this.#drainRequest(stream)
     })
-    request.once('error', () => this.#abortHttp(stream, 'public-request-failed'))
+    request.once('error', () => {
+      this.#recordError('transport')
+      this.#abortHttp(stream, 'public-request-failed')
+    })
     response.once('close', () => {
-      if (this.#streams.get(stream.id) === stream) this.#abortHttp(stream, 'public-response-closed')
+      if (this.#streams.get(stream.id) === stream) {
+        this.#recordError('transport')
+        this.#abortHttp(stream, 'public-response-closed')
+      }
     })
     this.#sendControl(seat, {
       type: 'http-open',
@@ -781,6 +844,7 @@ export class DshGateway {
         return
       case 'http-abort':
         if (stream.kind !== 'http') return this.#protocolError(seat)
+        this.#recordError('upstream')
         if (!stream.headReceived && !stream.response.headersSent) empty(stream.response, 502)
         else stream.response.destroy()
         this.#dropStream(stream, false)
@@ -792,6 +856,7 @@ export class DshGateway {
         return
       case 'ws-open-reject':
         if (stream.kind !== 'ws' || stream.opened) return this.#protocolError(seat)
+        this.#recordError('upstream')
         stream.socket.close(1013, 'upstream-rejected')
         this.#dropStream(stream, false)
         return
@@ -834,9 +899,11 @@ export class DshGateway {
         stream.responseUnconsumed + frame.payload.byteLength > DSH_TUNNEL_LIMITS.streamBufferBytes ||
         (roomId && this.#roomUnconsumed(roomId) + frame.payload.byteLength > DSH_TUNNEL_LIMITS.roomBufferBytes)
       ) {
+        this.#recordError('buffer')
         this.#abortHttp(stream, 'buffer-limit', 502)
         return
       }
+      this.#bytesDesktopToPublic += frame.payload.byteLength
       stream.responseSequence += 1
       stream.responseBytes += frame.payload.byteLength
       stream.responseCredit -= frame.payload.byteLength
@@ -864,10 +931,12 @@ export class DshGateway {
       stream.unconsumed + frame.payload.byteLength > DSH_TUNNEL_LIMITS.streamBufferBytes ||
       (roomId && this.#roomUnconsumed(roomId) + frame.payload.byteLength > DSH_TUNNEL_LIMITS.roomBufferBytes)
     ) {
+      this.#recordError('buffer')
       this.#sendControl(seat, { type: 'ws-close', streamId: stream.id, code: 1013, reason: 'buffer-limit' })
       this.#dropStream(stream, false)
       return
     }
+    this.#bytesDesktopToPublic += frame.payload.byteLength
     stream.sequence += 1
     stream.credit -= frame.payload.byteLength
     stream.unconsumed += frame.payload.byteLength
@@ -884,6 +953,7 @@ export class DshGateway {
   #handleHttpHead(stream: HttpStream, status: number, rawHeaders: DshTunnelHeaders): void {
     const headers = responseHeaders(rawHeaders, this.#publicOrigin!)
     if (!headers) {
+      this.#recordError('upstream')
       this.#abortHttp(stream, 'invalid-response')
       return
     }
@@ -920,6 +990,7 @@ export class DshGateway {
       stream.requestFlow.queuedBytes + payload.byteLength > DSH_TUNNEL_LIMITS.streamBufferBytes ||
       roomQueued + payload.byteLength > DSH_TUNNEL_LIMITS.roomBufferBytes
     ) {
+      this.#recordError('buffer')
       this.#abortHttp(stream, 'request-too-large', 413)
       return
     }
@@ -1026,11 +1097,17 @@ export class DshGateway {
   ): void {
     if (seat.tunnel?.readyState === WebSocket.OPEN) {
       seat.tunnel.send(encodeDshTunnelBinary({ kind, streamId, sequence, payload }))
+      this.#bytesPublicToDesktop += payload.byteLength
     }
   }
 
   #protocolError(seat: DesktopSeat): void {
+    this.#recordError('protocol')
     seat.tunnel?.close(1002, 'protocol-error')
+  }
+
+  #recordError(category: DshErrorCategory): void {
+    this.#errors[category] += 1
   }
 
   #dropDesktopSeat(seat: DesktopSeat): void {
@@ -1116,6 +1193,7 @@ export class DshGateway {
     if (stream.timer) clearTimeout(stream.timer)
     stream.timer = setTimeout(() => {
       if (this.#streams.get(stream.id) !== stream) return
+      this.#recordError('timeout')
       if (stream.kind === 'http') {
         this.#abortHttp(stream, 'timeout', 504)
         return

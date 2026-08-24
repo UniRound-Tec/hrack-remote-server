@@ -10,7 +10,11 @@ import {
 async function fixture() {
   const server = createServer((request, response) => {
     response.setHeader('content-security-policy', "default-src 'self'")
-    if (request.url === '/remote/healthz' || request.url === '/reconciler/healthz') {
+    if (
+      request.url === '/remote/healthz' ||
+      request.url === '/reconciler/healthz' ||
+      request.url === '/_healthz'
+    ) {
       response.writeHead(200).end('{"ok":true}')
       return
     }
@@ -42,6 +46,7 @@ test('checks the real HTTP interfaces without exposing response bodies', async (
   try {
     const report = await checkProductionHealth({
       origin: server.origin,
+      dshPublicOrigin: server.origin,
       webInternalOrigin: server.origin,
       relayInternalOrigin: server.origin,
       reconcilerHealthUrl: `${server.origin}/reconciler/healthz`
@@ -53,6 +58,7 @@ test('checks the real HTTP interfaces without exposing response bodies', async (
       'anonymous-create-blocked',
       'system-interface-hidden',
       'demo-hidden',
+      'public-dsh-health',
       'internal-web',
       'internal-relay',
       'pairing-reconciler'
@@ -84,7 +90,8 @@ test('strict release config reports only presence checks', () => {
     MAIL_PROVIDER: 'resend',
     RESEND_API_KEY: 'not-returned',
     SMTP_FROM: 'HRack <noreply@modplex.app>',
-    MONITOR_ALERT_EMAIL_TO: 'ops@example.test'
+    MONITOR_ALERT_EMAIL_TO: 'ops@example.test',
+    DSH_PUBLIC_ORIGIN: 'https://dsh.example.test'
   }, 'https://hrack.modplex.app')
   assert.equal(checks.every((check) => check.ok), true)
   assert.equal(JSON.stringify(checks).includes('not-returned'), false)

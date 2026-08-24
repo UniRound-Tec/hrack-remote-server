@@ -142,6 +142,10 @@ test('gives the DSH Web surface an independent no-log streaming virtual host', (
   assert.match(dshRoutes, /proxy_request_buffering\s+off;/)
   assert.match(dshRoutes, /proxy_buffering\s+off;/)
   assert.match(compose, /^      DSH_PUBLIC_ORIGIN: \$\{DSH_PUBLIC_ORIGIN:-\}\s*$/m)
+  assert.equal(
+    (compose.match(/^      DSH_PUBLIC_ORIGIN: \$\{DSH_PUBLIC_ORIGIN:-\}\s*$/gm) ?? []).length,
+    2
+  )
   assert.match(compose, /127\.0\.0\.1:\$\{DSH_HOST_EDGE_PORT:-8789\}:80/)
   assert.match(compose, /nginx\.dsh-host-edge\.conf:\/etc\/nginx\/conf\.d\/default\.conf:ro/)
 })
