@@ -328,7 +328,7 @@ sticky session 掩盖多个独立内存 authority。
 | `PONG_TIMEOUT_MS` | 10000 |
 | `REVOKE_DRAIN_MS` | 500 |
 
-DSH 另有独立 tunnel 配额：16 个 HTTP、1 条 SSE、2 条 event WebSocket，16 MiB request、
+DSH 另有独立 tunnel 配额：64 个 HTTP、1 条 SSE、2 条 event WebSocket，16 MiB request、
 32 MiB普通 response、512 KiB/stream 和 2 MiB/room 未消费缓冲。部署前可用
 `npm --prefix relay run verify:dsh-d2` 启动构建后真实进程验证 4.54 MB HTTP、两条 WS、
 ticket 重放、吊销与日志边界；这不替代后续手机公网真实 DSH 门禁。
