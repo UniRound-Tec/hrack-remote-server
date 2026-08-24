@@ -761,6 +761,10 @@ export class DshGateway {
     }
     const stream = 'streamId' in message ? this.#streams.get(message.streamId) : undefined
     if (!stream) {
+      // Stream ids are never reused. Once a stream is removed, frames already
+      // queued by Desktop may still arrive; discard those known tombstones but
+      // keep treating never-issued ids as a protocol violation.
+      if ('streamId' in message && this.#usedStreamIds.has(message.streamId)) return
       this.#protocolError(seat)
       return
     }
@@ -808,6 +812,7 @@ export class DshGateway {
     }
     const frame = parsed.value
     const stream = this.#streams.get(frame.streamId)
+    if (!stream && this.#usedStreamIds.has(frame.streamId)) return
     if (!stream) {
       this.#protocolError(seat)
       return

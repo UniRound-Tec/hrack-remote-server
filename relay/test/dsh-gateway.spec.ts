@@ -458,6 +458,44 @@ describe('D2 DSH gateway', () => {
     await new Promise<void>((resolve) => state.tunnel.socket.once('close', () => resolve()))
   })
 
+  it('keeps the tunnel alive when teardown races with late frames from a completed stream', async () => {
+    const state = await bootstrap()
+    running.push(state.server)
+    sockets.push(state.desktop.socket, state.phone.socket, state.tunnel.socket)
+    const authority = new URL(state.dshOrigin).host
+    const ticket = await issueTicket(state.phone)
+    const connected = await hostRequest(state.origin, connectPath(ticket.url), {
+      headers: { host: authority }
+    })
+    const request = hostRequest(state.origin, '/', {
+      headers: { host: authority, cookie: cookieFrom(connected) }
+    }).catch(() => null)
+    const open = await state.tunnel.nextControl('http-open')
+    if (open.type !== 'http-open') throw new Error('wrong control')
+
+    state.phone.socket.terminate()
+    expect(await state.tunnel.nextControl('http-abort')).toMatchObject({
+      streamId: open.streamId,
+      reason: 'session-closed'
+    })
+
+    // These frames may already be queued on Desktop when phone teardown wins.
+    state.tunnel.send({
+      type: 'http-head',
+      streamId: open.streamId,
+      status: 200,
+      headers: [['content-type', 'text/plain']]
+    })
+    state.tunnel.sendBinary(open.streamId, 0, 'late')
+    state.tunnel.send({ type: 'http-end', streamId: open.streamId })
+    state.tunnel.send({ type: 'ping' })
+    expect(await within('pong-after-late-frames', state.tunnel.nextControl('pong'))).toEqual({
+      type: 'pong'
+    })
+    expect(state.tunnel.socket.readyState).toBe(WebSocket.OPEN)
+    await request
+  })
+
   it('enforces the public route/method/body allowlist and closes an invalid tunnel state transition', async () => {
     const state = await bootstrap()
     running.push(state.server)
