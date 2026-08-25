@@ -403,6 +403,15 @@ export class DshGateway {
     if (input.message.type !== 'dsh-surface-state') return
     const seat = this.#desktopSeats.get(input.roomId)
     if (!seat || seat.connectionId !== input.connectionId) return
+    // The DSH credential is issued with the main Desktop seat. A long-lived
+    // Desktop connection can outlive its initial token TTL, so a later tunnel
+    // reconnect would otherwise retry the same expired credential forever.
+    // Only the authenticated main Desktop seat can announce `starting`; use
+    // that authority to renew the reconnect window without exposing or
+    // rotating the credential over the phone channel.
+    if (input.message.surface.state === 'starting') {
+      seat.tokenExpiresAt = this.dependencies.now() + this.config.dshSeatTokenTtlMs
+    }
     const changed = seat.surface?.generation !== input.message.surface.generation
     seat.surface = { ...input.message.surface }
     if (changed || input.message.surface.state !== 'ready') {

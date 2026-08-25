@@ -134,7 +134,7 @@ function asBuffer(data: RawData): Buffer {
   throw new Error('unsupported payload')
 }
 
-async function bootstrap(input: { ticketTtlMs?: number } = {}) {
+async function bootstrap(input: { ticketTtlMs?: number; seatTokenTtlMs?: number } = {}) {
   const port = await unusedPort()
   const origin = `http://127.0.0.1:${port}`
   const dshOrigin = 'https://dsh.test.example'
@@ -144,7 +144,8 @@ async function bootstrap(input: { ticketTtlMs?: number } = {}) {
       dshPublicOrigin: dshOrigin,
       allowInsecureLoopback: true,
       enableDevCreate: true,
-      dshTicketTtlMs: input.ticketTtlMs ?? 30_000
+      dshTicketTtlMs: input.ticketTtlMs ?? 30_000,
+      dshSeatTokenTtlMs: input.seatTokenTtlMs ?? 10 * 60_000
     })
   })
   await server.listen(port)
@@ -571,6 +572,43 @@ describe('D2 DSH gateway', () => {
     })
     state.tunnel.send({ type: 'ping' })
     expect(await within('pong-after-abnormal-close', state.tunnel.nextControl('pong'))).toEqual({
+      type: 'pong'
+    })
+  })
+
+  it('renews an expired tunnel credential when the authenticated Desktop starts reconnecting', async () => {
+    const state = await bootstrap({ seatTokenTtlMs: 20 })
+    running.push(state.server)
+    sockets.push(state.desktop.socket, state.phone.socket, state.tunnel.socket)
+
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    const closed = new Promise<void>((resolve) =>
+      state.tunnel.socket.once('close', () => resolve())
+    )
+    state.tunnel.socket.terminate()
+    await closed
+
+    state.desktop.send({
+      v: 1,
+      type: 'dsh-surface-state',
+      surface: {
+        id: 'dsh', kind: 'dsh-web', displayName: 'DeepSeek Harness', iconId: 'dsh',
+        state: 'starting', generation: 7
+      }
+    })
+    await state.phone.next()
+
+    const tunnel = await TunnelClient.connect(`ws://127.0.0.1:${state.port}/v1/dsh-tunnel`)
+    sockets.push(tunnel.socket)
+    tunnel.send({
+      type: 'dsh-tunnel-hello',
+      roomId: state.room.roomId,
+      dshSeatToken: state.desktopHello.dshSeatToken,
+      protocol: 1
+    })
+    tunnel.send({ type: 'ping' })
+
+    expect(await within('renewed-seat-pong', tunnel.nextControl('pong'))).toEqual({
       type: 'pong'
     })
   })
