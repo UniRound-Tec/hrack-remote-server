@@ -53,7 +53,7 @@ export const ja = {
       pageTitle: '登録 · HRack',
       title: 'リモート用アカウントを作る',
       lead: '先にアカウント。デスクトップのターミナルは動かさず、確認と質問だけスマホへ渡します。',
-      submit: 'アカウントを作成',
+      submit: 'アカウントを作成してコードを送信',
       switchHint: 'すでにアカウントがある？',
       switch: 'サインイン'
     },
@@ -78,11 +78,13 @@ export const ja = {
     showPassword: 'パスワードを表示',
     hidePassword: 'パスワードを隠す',
     submitting: '接続中…',
+    sendingCode: '確認コードを送信中…',
+    createAccount: 'アカウントを作成',
     verifyLabel: 'email verification',
     otp: '確認コード',
     otpPlaceholder: '000000',
     latestOtp: '最新のメールを使用',
-    resend: 'コードを再送',
+    resend: '確認コードを送信 / 再送',
     resendIn: (seconds: number) => `${seconds} 秒後に再送`,
     socialDivider: 'または',
     social: {
@@ -91,6 +93,7 @@ export const ja = {
     },
     back: 'ホームへ戻る',
     errors: {
+      verificationSent: '確認コードを送信しました。メールに届いた最新の 6 桁コードを入力してください。',
       emailRequired: 'メールを入力してください。',
       emailInvalid: 'メールの形式が正しくありません。',
       passwordRequired: 'パスワードを入力してください。',

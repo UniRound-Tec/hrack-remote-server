@@ -54,7 +54,7 @@ export const en = {
       pageTitle: 'Register · HRack',
       title: 'Create a remote account',
       lead: 'An account comes first. The desktop terminal does not move; approvals and questions travel to your phone.',
-      submit: 'Create account',
+      submit: 'Create account and send code',
       switchHint: 'Already have an account?',
       switch: 'Sign in'
     },
@@ -79,11 +79,13 @@ export const en = {
     showPassword: 'Show password',
     hidePassword: 'Hide password',
     submitting: 'Connecting\u2026',
+    sendingCode: 'Sending verification code\u2026',
+    createAccount: 'Create account',
     verifyLabel: 'email verification',
     otp: 'Verification code',
     otpPlaceholder: '000000',
     latestOtp: 'Use the newest email',
-    resend: 'Resend code',
+    resend: 'Send / resend verification code',
     resendIn: (seconds: number) => `Resend in ${seconds}s`,
     socialDivider: 'or',
     social: {
@@ -92,6 +94,7 @@ export const en = {
     },
     back: 'Back to home',
     errors: {
+      verificationSent: 'Code sent. Check your email and enter the newest 6-digit code.',
       emailRequired: 'Enter an email.',
       emailInvalid: 'That email does not look right.',
       passwordRequired: 'Enter a password.',

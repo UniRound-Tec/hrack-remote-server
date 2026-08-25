@@ -56,7 +56,7 @@ export const zhCN = {
       pageTitle: '注册 · HRack',
       title: '创建远程账号',
       lead: '先有账号，才有遥控器。桌面终端不搬家，确认和提问从手机接走。',
-      submit: '创建账号',
+      submit: '创建账号并发送验证码',
       switchHint: '已经有账号？',
       switch: '登录'
     },
@@ -81,11 +81,13 @@ export const zhCN = {
     showPassword: '显示密码',
     hidePassword: '隐藏密码',
     submitting: '连接中…',
+    sendingCode: '正在发送验证码…',
+    createAccount: '创建账号',
     verifyLabel: 'email verification',
     otp: '验证码',
     otpPlaceholder: '000000',
     latestOtp: '以最新一封为准',
-    resend: '重发验证码',
+    resend: '发送 / 重新发送验证码',
     resendIn: (seconds: number) => `${seconds} 秒后可重发`,
     socialDivider: '或者',
     social: {
@@ -94,6 +96,7 @@ export const zhCN = {
     },
     back: '返回首页',
     errors: {
+      verificationSent: '验证码已发送，请检查邮箱并输入最新的 6 位验证码。',
       emailRequired: '填写邮箱。',
       emailInvalid: '邮箱格式不对。',
       passwordRequired: '填写密码。',

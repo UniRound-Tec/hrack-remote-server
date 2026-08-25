@@ -53,7 +53,7 @@ export const zhTW = {
       pageTitle: '註冊 · HRack',
       title: '建立遠端帳號',
       lead: '先有帳號，才有遙控器。桌面終端機不搬家，確認和提問從手機接走。',
-      submit: '建立帳號',
+      submit: '建立帳號並傳送驗證碼',
       switchHint: '已經有帳號？',
       switch: '登入'
     },
@@ -78,11 +78,13 @@ export const zhTW = {
     showPassword: '顯示密碼',
     hidePassword: '隱藏密碼',
     submitting: '連線中…',
+    sendingCode: '正在傳送驗證碼…',
+    createAccount: '建立帳號',
     verifyLabel: 'email verification',
     otp: '驗證碼',
     otpPlaceholder: '000000',
     latestOtp: '以最新一封為準',
-    resend: '重發驗證碼',
+    resend: '傳送 / 重發驗證碼',
     resendIn: (seconds: number) => `${seconds} 秒後可重發`,
     socialDivider: '或者',
     social: {
@@ -91,6 +93,7 @@ export const zhTW = {
     },
     back: '返回首頁',
     errors: {
+      verificationSent: '驗證碼已傳送，請檢查郵件並輸入最新的 6 位驗證碼。',
       emailRequired: '填寫電子郵件。',
       emailInvalid: '電子郵件格式不對。',
       passwordRequired: '填寫密碼。',

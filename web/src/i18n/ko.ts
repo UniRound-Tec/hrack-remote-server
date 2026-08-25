@@ -53,7 +53,7 @@ export const ko = {
       pageTitle: '회원가입 · HRack',
       title: '원격 계정 만들기',
       lead: '먼저 계정. 데스크톱 터미널은 옮기지 않고, 확인과 질문은 휴대폰으로 넘깁니다.',
-      submit: '계정 만들기',
+      submit: '계정을 만들고 인증 코드 보내기',
       switchHint: '이미 계정이 있다면?',
       switch: '로그인'
     },
@@ -78,11 +78,13 @@ export const ko = {
     showPassword: '비밀번호 표시',
     hidePassword: '비밀번호 숨기기',
     submitting: '연결 중…',
+    sendingCode: '인증 코드 보내는 중…',
+    createAccount: '계정 만들기',
     verifyLabel: 'email verification',
     otp: '인증 코드',
     otpPlaceholder: '000000',
     latestOtp: '가장 최근 메일 사용',
-    resend: '코드 다시 보내기',
+    resend: '인증 코드 보내기 / 다시 보내기',
     resendIn: (seconds: number) => `${seconds}초 후 다시 보내기`,
     socialDivider: '또는',
     social: {
@@ -91,6 +93,7 @@ export const ko = {
     },
     back: '홈으로 돌아가기',
     errors: {
+      verificationSent: '인증 코드를 보냈습니다. 이메일에서 최신 6자리 코드를 입력하세요.',
       emailRequired: '이메일을 입력하세요.',
       emailInvalid: '이메일 형식이 올바르지 않습니다.',
       passwordRequired: '비밀번호를 입력하세요.',

@@ -7,7 +7,7 @@ import { authClient } from '@/lib/auth-client'
 import { allowNext } from '@/lib/auth-navigation'
 import { statusColor, type SessionStatus } from '@/lib/session-status'
 import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/react'
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Mail } from 'lucide-react'
 import {
   useEffect,
   useId,
@@ -39,6 +39,7 @@ type FieldErrors = {
 }
 
 type Feedback =
+  | 'verificationSent'
   | 'invalidCredentials'
   | 'emailNotVerified'
   | 'mailUnavailable'
@@ -105,6 +106,7 @@ export function AuthPanel({
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
+  const [sendingCode, setSendingCode] = useState(false)
   const [oauthSubmitting, setOauthSubmitting] = useState<OAuthProvider | null>(
     null
   )
@@ -249,7 +251,7 @@ export function AuthPanel({
         }
         if (authMethods.emailVerificationRequired) {
           setMode('verify')
-          setFeedback('emailNotVerified')
+          setFeedback('verificationSent')
           setCooldown(60)
           return
         }
@@ -288,9 +290,9 @@ export function AuthPanel({
   }
 
   async function resend(): Promise<void> {
-    if (cooldown > 0 || !EMAIL_RE.test(email.trim())) return
+    if (cooldown > 0 || sendingCode || !EMAIL_RE.test(email.trim())) return
     setFeedback(null)
-    setCooldown(60)
+    setSendingCode(true)
     try {
       const result = await authClient.emailOtp.sendVerificationOtp({
         email: email.trim().toLowerCase(),
@@ -298,10 +300,15 @@ export function AuthPanel({
       })
       if (result.error) {
         const mapped = errorFeedback(result.error as ClientError, true)
-        if (mapped === 'mailUnavailable') setFeedback(mapped)
+        setFeedback(mapped)
+        return
       }
+      setFeedback('verificationSent')
+      setCooldown(60)
     } catch {
-      // The resend response is intentionally non-enumerating; keep cooldown.
+      setFeedback('generic')
+    } finally {
+      setSendingCode(false)
     }
   }
 
@@ -448,7 +455,11 @@ export function AuthPanel({
                     >
                       <span
                         aria-hidden
-                        className="mt-1 size-2.5 shrink-0 rounded-full bg-status-needs-you-dot shadow-[0_0_10px_color-mix(in_srgb,var(--hrack-status-needsYou)_55%,transparent)]"
+                        className={`mt-1 size-2.5 shrink-0 rounded-full ${
+                          feedback === 'verificationSent'
+                            ? 'bg-status-done-dot shadow-[0_0_10px_color-mix(in_srgb,var(--hrack-status-done)_55%,transparent)]'
+                            : 'bg-status-needs-you-dot shadow-[0_0_10px_color-mix(in_srgb,var(--hrack-status-needsYou)_55%,transparent)]'
+                        }`}
                       />
                       <p className="text-[13px] leading-relaxed text-text-secondary">
                         {strings.auth.errors[feedback]}
@@ -612,17 +623,28 @@ export function AuthPanel({
                   disabled={submitting}
                   className="hrack-press hrack-press-primary mt-2 inline-flex h-11 items-center justify-center rounded-full bg-button-primary text-[14px] font-medium text-button-primary-fg hover:bg-button-primary-hover disabled:pointer-events-none disabled:opacity-60"
                 >
-                  {submitting ? strings.auth.submitting : copy.submit}
+                  {submitting
+                    ? mode === 'register' &&
+                      methods?.emailVerificationRequired !== false
+                      ? strings.auth.sendingCode
+                      : strings.auth.submitting
+                    : mode === 'register' &&
+                        methods?.emailVerificationRequired === false
+                      ? strings.auth.createAccount
+                      : copy.submit}
                 </button>
 
                 {mode === 'verify' && (
                   <button
                     type="button"
-                    disabled={cooldown > 0}
+                    disabled={cooldown > 0 || sendingCode}
                     onClick={() => void resend()}
-                    className="text-[12px] font-medium text-text-secondary underline-offset-4 hover:text-text-primary hover:underline disabled:text-text-faint disabled:no-underline"
+                    className="hrack-press inline-flex h-11 items-center justify-center gap-2 rounded-full border border-border-default bg-content px-4 text-[13px] font-medium text-text-secondary hover:border-border-strong hover:text-text-primary disabled:pointer-events-none disabled:text-text-faint"
                   >
-                    {cooldown > 0
+                    <Mail className="size-4" strokeWidth={1.75} aria-hidden />
+                    {sendingCode
+                      ? strings.auth.sendingCode
+                      : cooldown > 0
                       ? strings.auth.resendIn(cooldown)
                       : strings.auth.resend}
                   </button>
