@@ -76,7 +76,7 @@ export function Nav() {
   const onAuth = pathname === '/auth'
 
   return (
-    <header className="sticky top-0 z-50">
+    <header className={`sticky top-0 z-50 ${onAuth ? 'nav-on-dark' : ''}`}>
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 backdrop-blur-[8px]"

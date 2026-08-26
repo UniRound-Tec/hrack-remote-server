@@ -1,9 +1,13 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { TerminalBackdrop } from './TerminalBackdrop'
+import { LandingBeams } from './LandingBeams'
 
 export function RouteBackdrop() {
   const pathname = usePathname()
-  return pathname === '/' || pathname === '/auth' ? <TerminalBackdrop /> : null
+  return pathname === '/auth' ? (
+    <div className="route-landing-backdrop">
+      <LandingBeams />
+    </div>
+  ) : null
 }
