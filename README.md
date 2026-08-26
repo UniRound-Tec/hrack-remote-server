@@ -87,7 +87,7 @@ P5 明确区分自动探测与真实验收：本地测试通过不能替代 Rese
 对真实域名执行只读发布探测：
 
 ```sh
-npm run verify:p5-release -- --origin https://hrack.modplex.app
+npm run verify:p5-release -- --origin https://hrack.dev
 ```
 
 ### 创建首位管理员

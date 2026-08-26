@@ -1,7 +1,7 @@
 # HRack 配对平台 P5 正式发布检查清单
 
 > 对应规格：[P5 正式生产发布与运营关门](./PAIRING-P5-PRODUCTION-RELEASE-SPEC.md)
-> 目标部署：`https://hrack.modplex.app`
+> 目标部署：`https://hrack.dev`
 > 状态：执行中
 
 清单只记录结果、时间、耗时、commit/digest 和备份校验和。禁止填写邮箱全文、验证码、
@@ -80,7 +80,20 @@
 
 只有 A–G 全部勾选后，才可把平台规格状态改为“P1–P5 已完成”。
 
-## H. 2026-08-23 执行记录
+## H. 2026-08-26 `hrack.dev` 迁移记录
+
+- `PUBLIC_ORIGIN`/`BETTER_AUTH_URL` 已切换为 `https://hrack.dev`，
+  `DSH_PUBLIC_ORIGIN` 已切换为 `https://dsh.hrack.dev`。
+- 停写备份后显式迁移 2 条活动配对 URL，保留房间身份；迁移后
+  SQLite `integrity_check=ok`，协调器未产生 stale 配对。
+- 主域和 DSH 域名均使用受信 Let's Encrypt ECDSA 证书；新 DSH 证书到期日为
+  2026-11-24，自动续期复制与 OpenResty 热重载钩子已配置。
+- 生产监控连续返回 `ok=true`；额外使用临时房间经新公网 HTTPS/WSS 完成
+  canonical URL、桌面/手机入座、双向帧和 DSH capability origin 验证，房间随后撤销。
+- 旧 `hrack.modplex.app` 与 `dsh.hrack.modplex.app` OpenResty 入口已停用，
+  不保留 HTTP 跳转或 WebSocket 兼容。
+
+## I. 2026-08-23 执行记录
 
 - 正式部署 commit：`51cc6c8dd67714ecfd7bbdeaa5f724ddce7ed5e1`；Web 镜像
   `sha256:8e7ccee99dd7…`，Relay 镜像 `sha256:5d98c669db8e…`。宿主 OpenResty 已将整个

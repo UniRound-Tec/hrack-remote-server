@@ -24,7 +24,7 @@ P5 的完成标准是“真实生产链路有证据”，不是单元测试、�
 ### 2.1 官方部署与自部署
 
 - 仓库继续支持自部署，邮箱验证默认关闭，邮件提供商由部署者选择；
-- `hrack.modplex.app` 官方部署必须设置 `EMAIL_VERIFICATION_REQUIRED=1`、
+- `hrack.dev` 官方部署必须设置 `EMAIL_VERIFICATION_REQUIRED=1`、
   `MAIL_PROVIDER=resend`，发件地址必须属于 Resend 已验证的 `modplex.app` 域；
 - 官方部署策略只写入部署环境，不把官方域名、收件邮箱或 Resend 密钥写死到代码；
 - 无邮件的自部署仍可通过一次性 setup token 或固定版本 `web-tools` 初始化管理员。
@@ -41,7 +41,7 @@ P5 的完成标准是“真实生产链路有证据”，不是单元测试、�
 
 | 编号 | 不变量 |
 |---|---|
-| P5-I1 | `PUBLIC_ORIGIN`、`BETTER_AUTH_URL` 与浏览器最终 origin 完全一致，官方部署为 `https://hrack.modplex.app` |
+| P5-I1 | `PUBLIC_ORIGIN`、`BETTER_AUTH_URL` 与浏览器最终 origin 完全一致，官方部署为 `https://hrack.dev` |
 | P5-I2 | 证书链受信任、域名匹配且未过期；80 只跳转 443；配对 WebSocket 走 WSS |
 | P5-I3 | 匿名创建运行时房间保持 401，system API 与 demo 公网保持 404 |
 | P5-I4 | 官方部署的密码注册在真实邮件验证前不能进入 dashboard；OAuth 不能绕过同一策略 |
@@ -71,7 +71,7 @@ P5 在业务代码外建立一个深的“生产运维”模块，调用者只�
 ### P5.1 真实域名与 TLS
 
 - DNS 指向生产主机；
-- 受信任证书覆盖 `hrack.modplex.app`；
+- 受信任证书覆盖 `hrack.dev`；
 - HTTPS 首页、Relay health、WebSocket Upgrade 均通过；
 - HTTP 跳转不降级、不暴露 system API；
 - 记录证书颁发者、有效期和部署 commit，不记录任何密钥。
@@ -121,7 +121,7 @@ P5 在业务代码外建立一个深的“生产运维”模块，调用者只�
 
 ## 6. 自动检查
 
-`npm run verify:p5-release -- --origin https://hrack.modplex.app` 必须以真实网络检查：
+`npm run verify:p5-release -- --origin https://hrack.dev` 必须以真实网络检查：
 
 - TLS 信任、域名与剩余有效期；
 - HTTP→HTTPS；
@@ -152,7 +152,7 @@ revoke token 或终端 payload。
 只有以下条件全部满足，平台规格状态才可改为“P1–P5 已完成”：
 
 1. 仓库中的 P5 运维制品与自动门禁已实现并提交；
-2. `hrack.modplex.app` 的真实 TLS 与公网边界通过；
+2. `hrack.dev` 的真实 TLS 与公网边界通过；
 3. Resend 真实送达、邮箱验证、登录、首位管理员均通过；
 4. 手机 ↔ HRack 桌面端真实公网远控与同 URL 恢复通过；
 5. 生产数据备份及隔离恢复演练通过；

@@ -301,7 +301,7 @@ docker compose ps
 真实公网只读关门检查：
 
 ```sh
-npm run verify:p5-release -- --origin https://hrack.modplex.app
+npm run verify:p5-release -- --origin https://hrack.dev
 ```
 
 在生产主机加载受控 `.env` 后，可设置 `P5_REQUIRE_PRODUCTION_CONFIG=1` 再运行；它只报告

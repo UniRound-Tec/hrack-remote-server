@@ -92,7 +92,7 @@ test('strict release config reports only presence checks', () => {
     SMTP_FROM: 'HRack <noreply@modplex.app>',
     MONITOR_ALERT_EMAIL_TO: 'ops@example.test',
     DSH_PUBLIC_ORIGIN: 'https://dsh.example.test'
-  }, 'https://hrack.modplex.app')
+  }, 'https://hrack.dev')
   assert.equal(checks.every((check) => check.ok), true)
   assert.equal(JSON.stringify(checks).includes('not-returned'), false)
   assert.equal(JSON.stringify(checks).includes('ops@example.test'), false)
