@@ -1,5 +1,7 @@
 import { getSessionCookie } from 'better-auth/cookies'
 import { type NextRequest, NextResponse } from 'next/server'
+import { publicRelayNodes } from '@/lib/pairing/nodes'
+import { contentSecurityPolicy } from '@/lib/security/csp'
 
 const SETUP = '/admin/setup'
 
@@ -23,7 +25,20 @@ export function proxy(request: NextRequest): NextResponse {
   if (needsAuth && !getSessionCookie(request)) {
     return withNext(request, pathname)
   }
-  return NextResponse.next()
+  const response = NextResponse.next()
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    const relayOrigins = publicRelayNodes().map(
+      (node) => new URL(node.healthUrl).origin
+    )
+    response.headers.set(
+      'Content-Security-Policy',
+      contentSecurityPolicy({
+        isDevelopment: process.env.NODE_ENV === 'development',
+        connectSources: relayOrigins
+      })
+    )
+  }
+  return response
 }
 
 export const config = {
