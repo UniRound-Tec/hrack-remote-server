@@ -6,7 +6,7 @@ import { useLang } from '@/i18n/lang-context'
 import { authClient } from '@/lib/auth-client'
 import { allowNext } from '@/lib/auth-navigation'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ArrowLeft, CircleUserRound, Eye, EyeOff, Mail } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Mail } from 'lucide-react'
 import {
   useEffect,
   useId,
@@ -699,7 +699,7 @@ export function AuthPanel({
                     {methods['linux-do'] ? (
                       <OAuthButton
                         disabled={oauthSubmitting !== null}
-                        icon={<CircleUserRound className="size-4" />}
+                        icon={<LinuxDoIcon className="size-4" />}
                         label={strings.auth.social['linux-do']}
                         onClick={() => void signInWith('linux-do')}
                       />
@@ -737,6 +737,49 @@ export function AuthPanel({
       </main>
       <Footer />
     </div>
+  )
+}
+
+function LinuxDoIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      focusable="false"
+      viewBox="0 0 120 120"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <clipPath id="linux-do-icon-clip">
+          <circle cx="60" cy="60" r="47" />
+        </clipPath>
+      </defs>
+      <circle cx="60" cy="60" fill="#f0f0f0" r="50" />
+      <rect
+        clipPath="url(#linux-do-icon-clip)"
+        fill="#1c1c1e"
+        height="30"
+        width="100"
+        x="10"
+        y="10"
+      />
+      <rect
+        clipPath="url(#linux-do-icon-clip)"
+        fill="#f0f0f0"
+        height="40"
+        width="100"
+        x="10"
+        y="40"
+      />
+      <rect
+        clipPath="url(#linux-do-icon-clip)"
+        fill="#ffb003"
+        height="30"
+        width="100"
+        x="10"
+        y="80"
+      />
+    </svg>
   )
 }
 
