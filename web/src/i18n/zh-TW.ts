@@ -43,32 +43,32 @@ export const zhTW = {
     pointKeys: ['desktop', 'phone', 'url'],
     login: {
       pageTitle: '登入 · HRack',
-      title: '接上遠端控制台',
-      lead: '登入之後，這裡會發出一條遠端 URL：手機變成遙控器，桌面會話留在原處。',
+      title: '繼續遠端工作階段',
+      lead: '登入後，從手機安全接手桌面上的確認與操作。',
       submit: '登入',
       switchHint: '還沒有帳號？',
       switch: '註冊'
     },
     register: {
       pageTitle: '註冊 · HRack',
-      title: '建立遠端帳號',
-      lead: '先有帳號，才有遙控器。桌面終端機不搬家，確認和提問從手機接走。',
+      title: '建立帳號，隨時接手',
+      lead: '一個安全連結，讓桌面工作階段與手機保持同步。',
       submit: '建立帳號並傳送驗證碼',
       switchHint: '已經有帳號？',
       switch: '登入'
     },
     verify: {
       pageTitle: '驗證電子郵件 · HRack',
-      title: '輸入電子郵件驗證碼',
-      lead: '驗證碼 10 分鐘內有效。若收到多封郵件，請使用最新一封。',
+      title: '驗證信箱，繼續連線',
+      lead: '輸入最新的 6 位驗證碼即可繼續。',
       submit: '驗證並繼續',
       switchHint: '需要換個帳號？',
       switch: '返回登入'
     },
     points: [
-      '會話繼續跑在桌面，原生 TUI 一個位元組都不走。',
-      '確認、提問、出錯——燈亮的時候，手機接得住。',
-      '一條 URL 接上就行，不用再開第二套終端機。'
+      '桌面持續運行',
+      '安全連結同步',
+      '手機隨時接手'
     ],
     email: '電子郵件',
     emailPlaceholder: 'you@studio.dev',
@@ -80,6 +80,8 @@ export const zhTW = {
     submitting: '連線中…',
     sendingCode: '正在傳送驗證碼…',
     createAccount: '建立帳號',
+    mockLogin: '使用 Root Mock 進入',
+    mockLoading: '正在進入 Root Dashboard…',
     verifyLabel: 'email verification',
     otp: '驗證碼',
     otpPlaceholder: '000000',
@@ -122,6 +124,7 @@ export const zhTW = {
     account: '目前帳號',
     admin: '營運後台',
     signOut: '登出',
+    mockNotice: 'Mock 預覽：此 URL 僅用於查看介面樣式，不會連線 Relay 或任何真實裝置。',
     status: { ready: '可用', recovering: '正在恢復', stale: '需要輪換' },
     empty: {
       title: '建立你的遠端入口',

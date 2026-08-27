@@ -1,72 +1,16 @@
 'use client'
 
 import { useLang } from '@/i18n/lang-context'
-import { locales, localeLabels, type Locale } from '@/i18n'
 import { Brand } from './Brand'
+import { LanguageMenu } from './LanguageMenu'
 import Github from '@lobehub/icons/es/Github/components/Mono'
-import { ChevronDown, Languages } from 'lucide-react'
 import { usePathname } from 'next/navigation'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 const REPO_URL = 'https://github.com/UniRound-Tec/HRack'
 
-const MENU_WIDTH = 160
-const MENU_MARGIN = 8
-
 export function Nav() {
-  const { strings, lang, setLang } = useLang()
+  const { strings } = useLang()
   const pathname = usePathname()
-  const [open, setOpen] = useState(false)
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(
-    null
-  )
-  const menuRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onPointerDown = (event: PointerEvent): void => {
-      if (
-        event.target instanceof Node &&
-        menuRef.current?.contains(event.target)
-      ) {
-        return
-      }
-      setOpen(false)
-    }
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    window.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setMenuPos(null)
-      return
-    }
-    const place = (): void => {
-      const button = buttonRef.current
-      if (!button) return
-      const rect = button.getBoundingClientRect()
-      const vw = document.documentElement.clientWidth
-      const maxLeft = vw - MENU_MARGIN - MENU_WIDTH
-      const left = Math.min(Math.max(MENU_MARGIN, rect.right - MENU_WIDTH), maxLeft)
-      setMenuPos({ top: rect.bottom + 6, left })
-    }
-    place()
-    window.addEventListener('resize', place)
-    window.addEventListener('scroll', place, true)
-    return () => {
-      window.removeEventListener('resize', place)
-      window.removeEventListener('scroll', place, true)
-    }
-  }, [open])
 
   const links = [
     { href: 'https://github.com/UniRound-Tec/HRack#readme', label: strings.nav.docs },
@@ -108,51 +52,7 @@ export function Nav() {
         </div>
 
         <div className="ml-auto flex h-8 items-center gap-1.5">
-          <div className="relative flex h-8 items-center" ref={menuRef}>
-            <button
-              ref={buttonRef}
-              type="button"
-              aria-haspopup="listbox"
-              aria-expanded={open}
-              aria-label={strings.nav.language}
-              onClick={() => setOpen((value) => !value)}
-              className="hrack-press hrack-press-chip inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] leading-none font-medium text-text-muted hover:bg-surface-strong/70 hover:text-text-secondary"
-            >
-              <Languages className="size-3.5 shrink-0" strokeWidth={1.75} />
-              <span className="hidden sm:inline">{localeLabels[lang]}</span>
-              <ChevronDown
-                className={`size-3 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-                strokeWidth={1.75}
-              />
-            </button>
-            {open && menuPos && (
-              <ul
-                role="listbox"
-                aria-label={strings.nav.language}
-                style={{ top: menuPos.top, left: menuPos.left, width: MENU_WIDTH }}
-                className="fixed z-[70] overflow-hidden rounded-lg border border-border-default bg-content py-1 shadow-[0_16px_36px_-8px_var(--hrack-shadow-popover)]"
-              >
-                {locales.map((locale: Locale) => (
-                  <li key={locale} role="option" aria-selected={locale === lang}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLang(locale)
-                        setOpen(false)
-                      }}
-                      className={`w-full px-3 py-1.5 text-left text-[13px] transition-colors ${
-                        locale === lang
-                          ? 'bg-surface-strong font-medium text-text-primary'
-                          : 'text-text-secondary hover:bg-surface-hover'
-                      }`}
-                    >
-                      {localeLabels[locale]}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <LanguageMenu compact />
 
           <a
             href={REPO_URL}

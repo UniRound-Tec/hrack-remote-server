@@ -20,6 +20,10 @@ export default async function DashboardPage() {
       initialPairing={pairing}
       email={session.user.email}
       isAdmin={session.user.role === 'admin'}
+      isMock={
+        process.env.NODE_ENV === 'development' &&
+        session.user.email === 'mock@hrack.local'
+      }
     />
   )
 }

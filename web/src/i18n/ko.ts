@@ -43,32 +43,32 @@ export const ko = {
     pointKeys: ['desktop', 'phone', 'url'],
     login: {
       pageTitle: '로그인 · HRack',
-      title: '원격 콘솔에 연결',
-      lead: '로그인하면 여기에 원격 URL 이 발급됩니다. 휴대폰이 리모컨이 되고, 데스크톱 세션은 그 자리에 남습니다.',
+      title: '원격 세션 계속하기',
+      lead: '로그인하고 데스크톱의 확인과 작업을 휴대폰에서 안전하게 이어가세요.',
       submit: '로그인',
       switchHint: '아직 계정이 없다면?',
       switch: '회원가입'
     },
     register: {
       pageTitle: '회원가입 · HRack',
-      title: '원격 계정 만들기',
-      lead: '먼저 계정. 데스크톱 터미널은 옮기지 않고, 확인과 질문은 휴대폰으로 넘깁니다.',
+      title: '계정을 만들고 언제든 연결',
+      lead: '하나의 안전한 링크로 데스크톱 세션을 가까이 유지하세요.',
       submit: '계정을 만들고 인증 코드 보내기',
       switchHint: '이미 계정이 있다면?',
       switch: '로그인'
     },
     verify: {
       pageTitle: '이메일 확인 · HRack',
-      title: '이메일 인증 코드 입력',
-      lead: '코드는 10분 동안 유효합니다. 여러 메일이 오면 가장 최근 코드를 사용하세요.',
+      title: '이메일 확인 후 계속하기',
+      lead: '가장 최근에 받은 6자리 코드를 입력하세요.',
       submit: '인증하고 계속',
       switchHint: '다른 계정이 필요한가요?',
       switch: '로그인으로 돌아가기'
     },
     points: [
-      '세션은 데스크톱에서 계속 돌아갑니다. 네이티브 TUI 는 자리를 떠나지 않습니다.',
-      '승인, 질문, 오류 — 램프가 켜지면 휴대폰이 받을 수 있습니다.',
-      'URL 하나가 전부입니다. 두 번째 터미널은 필요 없습니다.'
+      '데스크톱에서 유지',
+      '안전한 링크',
+      '휴대폰으로 제어'
     ],
     email: '이메일',
     emailPlaceholder: 'you@studio.dev',
@@ -80,6 +80,8 @@ export const ko = {
     submitting: '연결 중…',
     sendingCode: '인증 코드 보내는 중…',
     createAccount: '계정 만들기',
+    mockLogin: 'Root Mock으로 계속하기',
+    mockLoading: 'Root Dashboard 여는 중…',
     verifyLabel: 'email verification',
     otp: '인증 코드',
     otpPlaceholder: '000000',
@@ -122,6 +124,7 @@ export const ko = {
     account: '현재 계정',
     admin: '운영 콘솔',
     signOut: '로그아웃',
+    mockNotice: 'Mock 미리보기: 이 URL은 화면 확인용이며 Relay나 실제 기기에 연결되지 않습니다.',
     status: { ready: '사용 가능', recovering: '복구 중', stale: '교체 필요' },
     empty: {
       title: '원격 진입점 만들기',

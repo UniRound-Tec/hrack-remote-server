@@ -1,6 +1,7 @@
 'use client'
 
 import { Brand } from '@/components/Brand'
+import { LanguageMenu } from '@/components/LanguageMenu'
 import {
   createPairingAction,
   refreshPairingAction,
@@ -14,7 +15,7 @@ import type {
 } from '@/lib/pairing/action-service'
 import type { PairingView } from '@/lib/pairing/lifecycle'
 import { pairingQrDataUrl } from '@/lib/pairing/qr'
-import { locales, localeLabels, type Locale } from '@/i18n'
+import { type Locale } from '@/i18n'
 import { useLang } from '@/i18n/lang-context'
 import {
   ArrowUpRight,
@@ -43,16 +44,37 @@ import {
 type PendingOperation = 'create' | 'rotate' | 'revoke' | null
 type Confirmation = 'rotate' | 'revoke' | null
 
+function mockPairing(): Extract<PairingView, { kind: 'ready' | 'recovering' }> {
+  const version = crypto.randomUUID()
+  return {
+    kind: 'ready',
+    version,
+    joinUrl: `https://remote.hrack.invalid/mock/${version}`,
+    createdAt: Date.now()
+  }
+}
+
+function mockPairingAction(
+  operation: Exclude<PendingOperation, null>
+): Promise<PairingActionResult> {
+  return Promise.resolve({
+    ok: true,
+    pairing: operation === 'revoke' ? { kind: 'empty' } : mockPairing()
+  })
+}
+
 export function PairingDashboard({
   initialPairing,
   email,
-  isAdmin
+  isAdmin,
+  isMock
 }: {
   initialPairing: PairingView
   email: string
   isAdmin: boolean
+  isMock: boolean
 }) {
-  const { strings, lang, setLang } = useLang()
+  const { strings, lang } = useLang()
   const copyInput = useRef<HTMLInputElement>(null)
   const confirmDialog = useRef<HTMLDialogElement>(null)
   const [pairing, setPairing] = useState(initialPairing)
@@ -75,7 +97,7 @@ export function PairingDashboard({
   }, [confirmation])
 
   useEffect(() => {
-    if (!active || pending) return
+    if (isMock || !active || pending) return
     let timer: ReturnType<typeof setTimeout> | undefined
     let stopped = false
     const delay = pairing.kind === 'recovering' ? 2_000 : 5_000
@@ -106,7 +128,7 @@ export function PairingDashboard({
       if (timer) clearTimeout(timer)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [active, pairing.kind, pending])
+  }, [active, isMock, pairing.kind, pending])
 
   async function apply(
     operation: Exclude<PendingOperation, null>,
@@ -155,8 +177,8 @@ export function PairingDashboard({
   const destructiveDisabled = pending !== null || pairing.kind === 'recovering'
 
   return (
-    <div className="min-h-screen bg-app">
-      <header className="border-b border-border-default bg-content/90 backdrop-blur-xl">
+    <div className="min-h-screen bg-transparent">
+      <header className="nav-on-dark sticky top-0 z-40 border-b border-white/10 bg-black/80 shadow-[0_10px_35px_-28px_rgb(0_0_0/90%)] backdrop-blur-xl">
         <div className="mx-auto flex min-h-16 max-w-5xl items-center gap-4 px-5 sm:px-8">
           <Link href="/dashboard" className="flex items-baseline gap-3">
             <Brand className="text-[22px]" />
@@ -168,18 +190,7 @@ export function PairingDashboard({
             <span className="hidden max-w-52 truncate font-maple text-[11px] text-text-muted md:block">
               {email}
             </span>
-            <select
-              aria-label={strings.nav.language}
-              value={lang}
-              onChange={(event) => setLang(event.target.value as Locale)}
-              className="h-8 rounded-md border border-border-default bg-surface px-2 text-[12px] text-text-secondary"
-            >
-              {locales.map((locale) => (
-                <option key={locale} value={locale}>
-                  {localeLabels[locale]}
-                </option>
-              ))}
-            </select>
+            <LanguageMenu compact />
             {isAdmin ? (
               <Link
                 href="/admin"
@@ -203,25 +214,32 @@ export function PairingDashboard({
 
       <main className="mx-auto w-full max-w-5xl px-5 py-12 sm:px-8 sm:py-16">
         <div className="max-w-2xl">
-          <p className="font-maple text-[10px] tracking-[0.2em] text-text-faint uppercase">
+          <p className="font-maple text-[10px] tracking-[0.2em] text-white/45 uppercase">
             pairing · account-owned
           </p>
-          <h1 className="mt-3 text-[30px] font-semibold tracking-tight text-text-primary sm:text-[36px]">
+          <h1 className="mt-3 text-[30px] font-semibold tracking-tight text-white sm:text-[36px]">
             {strings.dashboard.title}
           </h1>
-          <p className="mt-3 max-w-xl text-[14px] leading-7 text-text-muted">
+          <p className="mt-3 max-w-xl text-[14px] leading-7 text-white/65">
             {strings.dashboard.lead}
           </p>
         </div>
 
         <section
-          className="mt-9 overflow-hidden rounded-2xl border border-border-default bg-content shadow-[0_28px_70px_-42px_var(--hrack-shadow-popover)]"
+          className="mt-9 overflow-hidden rounded-2xl border border-white/20 bg-content/95 shadow-[0_28px_70px_-32px_rgb(0_0_0/65%)] backdrop-blur-xl"
           aria-live="polite"
         >
           {pairing.kind === 'empty' ? (
             <EmptyPairing
               pending={pending === 'create'}
-              onCreate={() => void apply('create', createPairingAction)}
+              onCreate={() =>
+                void apply(
+                  'create',
+                  isMock
+                    ? () => mockPairingAction('create')
+                    : createPairingAction
+                )
+              }
             />
           ) : pairing.kind === 'stale' ? (
             <StalePairing
@@ -237,6 +255,7 @@ export function PairingDashboard({
               destructiveDisabled={destructiveDisabled}
               pending={pending}
               lang={lang}
+              isMock={isMock}
               onCopy={() => void copyUrl()}
               onRotate={() => setConfirmation('rotate')}
               onRevoke={() => setConfirmation('revoke')}
@@ -257,7 +276,7 @@ export function PairingDashboard({
           ) : null}
         </section>
 
-        <p className="mt-5 flex items-center gap-2 text-[12px] text-text-faint">
+        <p className="mt-5 flex items-center gap-2 text-[12px] text-white/45">
           <ShieldCheck className="size-4" strokeWidth={1.6} />
           {strings.dashboard.account}: <span className="truncate">{email}</span>
         </p>
@@ -314,9 +333,11 @@ export function PairingDashboard({
                   const input = { version: pairing.version }
                   void apply(
                     confirmation,
-                    confirmation === 'rotate'
-                      ? () => rotatePairingAction(input)
-                      : () => revokePairingAction(input)
+                    isMock
+                      ? () => mockPairingAction(confirmation)
+                      : confirmation === 'rotate'
+                        ? () => rotatePairingAction(input)
+                        : () => revokePairingAction(input)
                   )
                 }}
                 className="hrack-press inline-flex h-9 items-center gap-2 rounded-md bg-button-primary px-4 text-[13px] font-medium text-button-primary-fg hover:bg-button-primary-hover disabled:opacity-50"
@@ -419,6 +440,7 @@ function ActivePairing({
   destructiveDisabled,
   pending,
   lang,
+  isMock,
   onCopy,
   onRotate,
   onRevoke
@@ -430,6 +452,7 @@ function ActivePairing({
   destructiveDisabled: boolean
   pending: PendingOperation
   lang: Locale
+  isMock: boolean
   onCopy: () => void
   onRotate: () => void
   onRevoke: () => void
@@ -445,6 +468,12 @@ function ActivePairing({
         <p className="mt-2 text-[13px] leading-6 text-text-muted">
           {strings.dashboard.active.lead}
         </p>
+
+        {isMock ? (
+          <div className="mt-5 rounded-lg border border-dashed border-[color-mix(in_srgb,var(--hrack-status-needsYou)_30%,transparent)] bg-[color-mix(in_srgb,var(--hrack-status-needsYou)_7%,white)] px-4 py-3 text-[12px] leading-5 text-status-needs-you">
+            {strings.dashboard.mockNotice}
+          </div>
+        ) : null}
 
         {pairing.kind === 'recovering' ? (
           <div className="mt-5 flex items-start gap-2.5 rounded-lg border border-[color-mix(in_srgb,var(--hrack-status-working)_18%,transparent)] bg-[color-mix(in_srgb,var(--hrack-status-working)_6%,white)] px-4 py-3 text-[12px] leading-5 text-status-working">

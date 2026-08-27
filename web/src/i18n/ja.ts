@@ -43,32 +43,32 @@ export const ja = {
     pointKeys: ['desktop', 'phone', 'url'],
     login: {
       pageTitle: 'サインイン · HRack',
-      title: 'リモートコンソールにつなぐ',
-      lead: 'サインインすると、ここにリモート URL が発行されます。スマホがリモコンになり、デスクトップのセッションはそのまま。',
+      title: 'リモートセッションを続ける',
+      lead: 'サインインして、デスクトップの確認や操作をスマホから安全に引き継げます。',
       submit: 'サインイン',
       switchHint: 'アカウントがない？',
       switch: '登録'
     },
     register: {
       pageTitle: '登録 · HRack',
-      title: 'リモート用アカウントを作る',
-      lead: '先にアカウント。デスクトップのターミナルは動かさず、確認と質問だけスマホへ渡します。',
+      title: 'アカウントを作成して、いつでも接続',
+      lead: 'ひとつの安全なリンクで、デスクトップセッションを手元に。',
       submit: 'アカウントを作成してコードを送信',
       switchHint: 'すでにアカウントがある？',
       switch: 'サインイン'
     },
     verify: {
       pageTitle: 'メールを確認 · HRack',
-      title: 'メールの確認コードを入力',
-      lead: 'コードは 10 分間有効です。複数届いた場合は、最新のメールを使用してください。',
+      title: 'メールを確認して続ける',
+      lead: '最新の 6 桁コードを入力してください。',
       submit: '確認して続ける',
       switchHint: '別のアカウントを使う？',
       switch: 'サインインへ戻る'
     },
     points: [
-      'セッションはデスクで動き続ける。ネイティブ TUI は箱から出ない。',
-      '承認、質問、エラー — ランプが灯ったら、スマホが受け取れる。',
-      '握手は URL 一本。二台目のターミナルは不要。'
+      'デスクトップで継続',
+      '安全なリンク',
+      'スマホで操作'
     ],
     email: 'メール',
     emailPlaceholder: 'you@studio.dev',
@@ -80,6 +80,8 @@ export const ja = {
     submitting: '接続中…',
     sendingCode: '確認コードを送信中…',
     createAccount: 'アカウントを作成',
+    mockLogin: 'Root Mock で続ける',
+    mockLoading: 'Root Dashboard を開いています…',
     verifyLabel: 'email verification',
     otp: '確認コード',
     otpPlaceholder: '000000',
@@ -122,6 +124,7 @@ export const ja = {
     account: '現在のアカウント',
     admin: '運用コンソール',
     signOut: 'ログアウト',
+    mockNotice: 'Mock プレビュー：この URL は表示専用で、Relay や実際の端末には接続しません。',
     status: { ready: '利用可能', recovering: '復旧中', stale: 'ローテーションが必要' },
     empty: {
       title: 'リモート入口を作成',

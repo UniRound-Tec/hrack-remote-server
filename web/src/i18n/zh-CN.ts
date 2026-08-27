@@ -46,32 +46,32 @@ export const zhCN = {
     pointKeys: ['desktop', 'phone', 'url'],
     login: {
       pageTitle: '登录 · HRack',
-      title: '接上远程控制台',
-      lead: '登录之后，这里会发出一条远程 URL：手机变成遥控器，桌面会话留在原处。',
+      title: '继续远程会话',
+      lead: '登录后，从手机安全接手桌面上的确认与操作。',
       submit: '登录',
       switchHint: '还没有账号？',
       switch: '注册'
     },
     register: {
       pageTitle: '注册 · HRack',
-      title: '创建远程账号',
-      lead: '先有账号，才有遥控器。桌面终端不搬家，确认和提问从手机接走。',
+      title: '创建账号，随时接手',
+      lead: '一个安全链接，让桌面会话与手机保持同步。',
       submit: '创建账号并发送验证码',
       switchHint: '已经有账号？',
       switch: '登录'
     },
     verify: {
       pageTitle: '验证邮箱 · HRack',
-      title: '输入邮箱验证码',
-      lead: '验证码 10 分钟内有效。若收到多封邮件，请使用最新一封。',
+      title: '验证邮箱，继续连接',
+      lead: '输入最新的 6 位验证码即可继续。',
       submit: '验证并继续',
       switchHint: '需要换个账号？',
       switch: '返回登录'
     },
     points: [
-      '会话继续跑在桌面，原生 TUI 一个字节都不走。',
-      '确认、提问、出错——灯亮的时候，手机接得住。',
-      '一条 URL 接上就行，不用再开第二套终端。'
+      '桌面持续运行',
+      '安全链接同步',
+      '手机随时接手'
     ],
     email: '邮箱',
     emailPlaceholder: 'you@studio.dev',
@@ -83,6 +83,8 @@ export const zhCN = {
     submitting: '连接中…',
     sendingCode: '正在发送验证码…',
     createAccount: '创建账号',
+    mockLogin: '使用 Root Mock 进入',
+    mockLoading: '正在进入 Root Dashboard…',
     verifyLabel: 'email verification',
     otp: '验证码',
     otpPlaceholder: '000000',
@@ -125,6 +127,7 @@ export const zhCN = {
     account: '当前账号',
     admin: '运营后台',
     signOut: '退出登录',
+    mockNotice: 'Mock 预览：此 URL 仅用于查看界面样式，不会连接 Relay 或任何真实设备。',
     status: { ready: '可用', recovering: '正在恢复', stale: '需要轮换' },
     empty: {
       title: '创建你的远程入口',

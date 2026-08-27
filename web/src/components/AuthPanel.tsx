@@ -5,13 +5,11 @@ import Google from '@lobehub/icons/es/Google/components/Color'
 import { useLang } from '@/i18n/lang-context'
 import { authClient } from '@/lib/auth-client'
 import { allowNext } from '@/lib/auth-navigation'
-import { statusColor, type SessionStatus } from '@/lib/session-status'
-import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Eye, EyeOff, Mail } from 'lucide-react'
 import {
   useEffect,
   useId,
-  useRef,
   useState,
   type ClipboardEvent,
   type FormEvent,
@@ -25,7 +23,6 @@ import { Eyebrow } from './Reveal'
 const EASE = [0.22, 1, 0.36, 1] as const
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const OTP_RE = /^\d{6}$/
-const POINT_LAMPS: SessionStatus[] = ['working', 'needs-you', 'done']
 const LAST_EMAIL_KEY = 'hrack-auth-email'
 
 export type AuthMode = 'login' | 'register' | 'verify'
@@ -96,6 +93,7 @@ export function AuthPanel({
   const [mode, setMode] = useState<AuthMode>(
     initialError === 'email_not_verified' ? 'verify' : initialMode
   )
+  const [direction, setDirection] = useState<1 | -1>(1)
   const copy = strings.auth[mode]
   const formId = useId()
 
@@ -107,6 +105,7 @@ export function AuthPanel({
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
   const [sendingCode, setSendingCode] = useState(false)
+  const [mockSubmitting, setMockSubmitting] = useState(false)
   const [oauthSubmitting, setOauthSubmitting] = useState<OAuthProvider | null>(
     null
   )
@@ -118,10 +117,6 @@ export function AuthPanel({
     if (initialError === 'email_not_verified') return 'emailNotVerified'
     return null
   })
-
-  const pointsRef = useRef<HTMLUListElement>(null)
-  const pointsInView = useInView(pointsRef, { once: true, margin: '-40px' })
-  const lit = pointsInView || Boolean(reduce)
 
   useEffect(() => {
     document.title = copy.pageTitle
@@ -159,6 +154,8 @@ export function AuthPanel({
   })
 
   function selectMode(next: Exclude<AuthMode, 'verify'>): void {
+    if (next === mode) return
+    setDirection(next === 'register' ? 1 : -1)
     setMode(next)
     setErrors({})
     setFeedback(null)
@@ -250,6 +247,7 @@ export function AuthPanel({
           return
         }
         if (authMethods.emailVerificationRequired) {
+          setDirection(1)
           setMode('verify')
           setFeedback('verificationSent')
           setCooldown(60)
@@ -272,6 +270,7 @@ export function AuthPanel({
           clientError.status === 403 ||
           code.includes('EMAIL_NOT_VERIFIED')
         ) {
+          setDirection(1)
           setMode('verify')
           setFeedback('emailNotVerified')
           setCooldown(60)
@@ -329,6 +328,20 @@ export function AuthPanel({
     }
   }
 
+  async function mockSignIn(): Promise<void> {
+    if (mockSubmitting) return
+    setFeedback(null)
+    setMockSubmitting(true)
+    try {
+      const response = await fetch('/api/dev/mock-login', { method: 'POST' })
+      if (!response.ok) throw new Error('mock sign in failed')
+      finish()
+    } catch {
+      setFeedback('generic')
+      setMockSubmitting(false)
+    }
+  }
+
   function onOtpPaste(event: ClipboardEvent<HTMLInputElement>): void {
     const digits = event.clipboardData.getData('text').match(/\d{6}/)?.[0]
     if (!digits) return
@@ -348,76 +361,51 @@ export function AuthPanel({
       <Nav />
       <main
         id="main"
-        className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 py-10 sm:px-8 lg:py-14"
+        className="mx-auto flex w-full max-w-[31rem] flex-1 flex-col justify-center px-5 py-10 sm:px-8 lg:py-14"
       >
-        <div className="overflow-hidden rounded-2xl border border-border-default bg-content shadow-[0_28px_70px_-36px_var(--hrack-shadow-popover)]">
-          <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,22rem)]">
-            <motion.section
-              {...fadeUp(0)}
-              className="order-2 flex flex-col border-t border-border-default p-7 sm:p-9 lg:order-1 lg:border-t-0 lg:border-r"
-            >
-              <div className="flex items-center gap-2.5">
-                <span
-                  aria-hidden
-                  className="size-1.5 rounded-full bg-flame shadow-[0_0_10px_color-mix(in_srgb,var(--hrack-accent-flame)_60%,transparent)]"
-                />
-                <Eyebrow>{strings.auth.eyebrow}</Eyebrow>
-              </div>
-              <p className="mt-5">
-                <Brand className="text-[40px] sm:text-[48px]" />
-              </p>
-              <h1 className="mt-5 max-w-md text-[24px] leading-snug font-semibold tracking-tight text-text-primary sm:text-[28px]">
-                {copy.title}
-              </h1>
-              <p className="mt-3 max-w-md text-[14px] leading-relaxed text-text-muted">
-                {copy.lead}
-              </p>
+        <motion.section
+          {...fadeUp(0)}
+          className="overflow-hidden rounded-2xl border border-border-default bg-content p-7 shadow-[0_28px_70px_-36px_var(--hrack-shadow-popover)] sm:p-10"
+        >
+              <header className="text-center">
+                <div className="flex items-center justify-center gap-2.5">
+                  <span
+                    aria-hidden
+                    className="size-1.5 rounded-full bg-flame shadow-[0_0_10px_color-mix(in_srgb,var(--hrack-accent-flame)_60%,transparent)]"
+                  />
+                  <Eyebrow>{strings.auth.eyebrow}</Eyebrow>
+                </div>
+                <p className="mt-4">
+                  <Brand className="text-[42px] sm:text-[48px]" />
+                </p>
+                <AnimatePresence initial={false} mode="wait" custom={direction}>
+                  <motion.div
+                    key={mode}
+                    custom={direction}
+                    initial={
+                      reduce
+                        ? false
+                        : { opacity: 0, x: direction * 12, filter: 'blur(3px)' }
+                    }
+                    animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                    exit={
+                      reduce
+                        ? { opacity: 0 }
+                        : { opacity: 0, x: direction * -10, filter: 'blur(2px)' }
+                    }
+                    transition={{ duration: 0.26, ease: EASE }}
+                  >
+                    <h1 className="mt-5 text-[24px] leading-snug font-semibold tracking-tight text-text-primary sm:text-[26px]">
+                      {copy.title}
+                    </h1>
+                    <p className="mx-auto mt-2 max-w-sm text-[13px] leading-relaxed text-text-muted">
+                      {copy.lead}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              </header>
 
-              <ul ref={pointsRef} className="mt-8 max-w-md space-y-4">
-                {strings.auth.points.map((text, index) => {
-                  const lamp = POINT_LAMPS[index]
-                  const color = statusColor[lamp]
-                  return (
-                    <li key={strings.auth.pointKeys[index]} className="flex gap-3">
-                      <span
-                        aria-hidden
-                        className={`mt-1.5 size-2.5 shrink-0 rounded-full ${lamp === 'working' && lit ? 'dot-breathe' : ''}`}
-                        style={{
-                          backgroundColor: lit
-                            ? color
-                            : 'var(--hrack-status-idle-dot)',
-                          boxShadow: lit
-                            ? `0 0 12px color-mix(in srgb, ${color} 55%, transparent)`
-                            : 'none',
-                          transition: 'background-color 700ms, box-shadow 700ms',
-                          transitionDelay: lit ? `${index * 120}ms` : '0ms'
-                        }}
-                      />
-                      <div>
-                        <p className="font-maple text-[10px] tracking-[0.18em] text-text-faint uppercase">
-                          {strings.auth.pointKeys[index]}
-                        </p>
-                        <p className="mt-0.5 text-[13px] leading-relaxed text-text-secondary">
-                          {text}
-                        </p>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-
-              <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 pt-10 font-maple text-[11px] tracking-wide">
-                <dt className="text-text-faint">{strings.auth.consoleLabel}</dt>
-                <dd className="text-text-secondary">{strings.auth.consoleIdle}</dd>
-                <dt className="text-text-faint">{strings.auth.sessionsLabel}</dt>
-                <dd className="text-text-faint">—</dd>
-              </dl>
-            </motion.section>
-
-            <motion.section
-              {...fadeUp(0.12)}
-              className="order-1 flex flex-col bg-app/60 p-7 sm:p-9 lg:order-2"
-            >
+              <div className="mt-7 border-t border-border-faint pt-7">
               {mode === 'verify' ? (
                 <p className="rounded-lg border border-border-default bg-surface-strong px-3 py-2 text-center font-maple text-[10px] tracking-[0.18em] text-text-faint uppercase">
                   {strings.auth.verifyLabel}
@@ -432,15 +420,35 @@ export function AuthPanel({
                     active={mode === 'login'}
                     label={strings.nav.login}
                     onSelect={() => selectMode('login')}
+                    reduced={Boolean(reduce)}
                   />
                   <ModeTab
                     active={mode === 'register'}
                     label={strings.nav.register}
                     onSelect={() => selectMode('register')}
+                    reduced={Boolean(reduce)}
                   />
                 </div>
               )}
 
+              <AnimatePresence initial={false} mode="popLayout" custom={direction}>
+                <motion.div
+                  key={mode}
+                  layout
+                  custom={direction}
+                  initial={
+                    reduce
+                      ? false
+                      : { opacity: 0, x: direction * 22, filter: 'blur(4px)' }
+                  }
+                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                  exit={
+                    reduce
+                      ? { opacity: 0 }
+                      : { opacity: 0, x: direction * -18, filter: 'blur(3px)' }
+                  }
+                  transition={{ duration: 0.32, ease: EASE }}
+                >
               <form className="mt-7 flex flex-col gap-4" onSubmit={onSubmit} noValidate>
                 <AnimatePresence>
                   {feedback && (
@@ -470,7 +478,6 @@ export function AuthPanel({
 
                 <Field
                   id={`${formId}-email`}
-                  name="email"
                   label={strings.auth.email}
                   error={errors.email ? strings.auth.errors[errors.email] : undefined}
                 >
@@ -500,7 +507,6 @@ export function AuthPanel({
                 {mode !== 'verify' && (
                   <Field
                     id={`${formId}-password`}
-                    name="password"
                     label={strings.auth.password}
                     hint={mode === 'register' ? strings.auth.passwordHint : undefined}
                     error={
@@ -553,7 +559,6 @@ export function AuthPanel({
                 {mode === 'register' && (
                   <Field
                     id={`${formId}-confirm`}
-                    name="confirm"
                     label={strings.auth.confirm}
                     error={
                       errors.confirm ? strings.auth.errors[errors.confirm] : undefined
@@ -587,7 +592,6 @@ export function AuthPanel({
                 {mode === 'verify' && (
                   <Field
                     id={`${formId}-otp`}
-                    name="otp"
                     label={strings.auth.otp}
                     hint={strings.auth.latestOtp}
                     error={errors.otp ? strings.auth.errors[errors.otp] : undefined}
@@ -633,6 +637,19 @@ export function AuthPanel({
                       ? strings.auth.createAccount
                       : copy.submit}
                 </button>
+
+                {process.env.NODE_ENV === 'development' && mode !== 'verify' ? (
+                  <button
+                    type="button"
+                    disabled={mockSubmitting || submitting}
+                    onClick={() => void mockSignIn()}
+                    className="hrack-press inline-flex h-11 items-center justify-center rounded-full border border-dashed border-border-strong bg-content px-4 text-[13px] font-medium text-text-secondary hover:bg-surface-strong hover:text-text-primary disabled:pointer-events-none disabled:opacity-60"
+                  >
+                    {mockSubmitting
+                      ? strings.auth.mockLoading
+                      : strings.auth.mockLogin}
+                  </button>
+                ) : null}
 
                 {mode === 'verify' && (
                   <button
@@ -703,9 +720,10 @@ export function AuthPanel({
                   {strings.auth.back}
                 </a>
               </div>
-            </motion.section>
-          </div>
-        </div>
+                </motion.div>
+              </AnimatePresence>
+              </div>
+        </motion.section>
       </main>
       <Footer />
     </div>
@@ -739,11 +757,13 @@ function OAuthButton({
 function ModeTab({
   active,
   label,
-  onSelect
+  onSelect,
+  reduced
 }: {
   active: boolean
   label: string
   onSelect: () => void
+  reduced: boolean
 }) {
   return (
     <button
@@ -751,27 +771,32 @@ function ModeTab({
       role="tab"
       aria-selected={active}
       onClick={onSelect}
-      className={`rounded-md px-3 py-1.5 text-center text-[12px] leading-none font-medium transition-colors duration-200 ${
+      className={`relative isolate overflow-hidden rounded-md px-3 py-1.5 text-center text-[12px] leading-none font-medium transition-colors duration-200 ${
         active
-          ? 'bg-content text-text-primary shadow-[0_1px_2px_rgb(0_0_0/8%)]'
+          ? 'text-text-primary'
           : 'text-text-muted hover:text-text-secondary'
       }`}
     >
-      {label}
+      {active ? (
+        <motion.span
+          layoutId="auth-mode-indicator"
+          className="absolute inset-0 z-0 rounded-md bg-content shadow-[0_1px_2px_rgb(0_0_0/8%)]"
+          transition={reduced ? { duration: 0 } : { duration: 0.32, ease: EASE }}
+        />
+      ) : null}
+      <span className="relative z-10">{label}</span>
     </button>
   )
 }
 
 function Field({
   id,
-  name,
   label,
   hint,
   error,
   children
 }: {
   id: string
-  name: string
   label: string
   hint?: string
   error?: string
@@ -782,10 +807,9 @@ function Field({
       <div className="flex items-baseline justify-between gap-3">
         <label
           htmlFor={id}
-          className="font-maple text-[10px] font-medium tracking-[0.18em] text-text-faint uppercase"
+          className="text-[12px] font-medium text-text-secondary"
         >
-          <span className="sr-only">{label}</span>
-          <span aria-hidden>{name}</span>
+          {label}
         </label>
         {hint && !error ? (
           <span className="font-maple text-[10px] tracking-wide text-text-faint">

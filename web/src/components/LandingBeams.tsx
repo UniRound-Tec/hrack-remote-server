@@ -57,7 +57,7 @@ float beam(vec2 p, float side, float offset, float width, float phase) {
   float distanceToBeam = abs(p.x - center);
   float body = 1.0 - smoothstep(spread * 0.18, spread, distanceToBeam);
   float lowerFade = smoothstep(0.015, 0.13, p.y);
-  float upperFade = 1.0 - smoothstep(0.50, 0.73, p.y);
+  float upperFade = 1.0 - smoothstep(0.84, 1.0, p.y);
   float sweep = 0.72 + 0.28 * sin(uTime * 0.46 + phase + p.y * 6.0);
   float texture = 0.62 + 0.38 * fbm(vec2(p.x * 2.0 + phase, p.y * 4.0 - uTime * 0.11));
   texture *= sweep;
@@ -84,7 +84,7 @@ void main() {
   float pulse = 0.78 + 0.22 * sin(uTime * 0.68);
 
   float roamingGlow = exp(-pow((abs(p.x) - (0.47 + sin(uTime * 0.42) * 0.16)) / 0.17, 2.0));
-  roamingGlow *= smoothstep(0.07, 0.18, vUv.y) * (1.0 - smoothstep(0.43, 0.60, vUv.y));
+  roamingGlow *= smoothstep(0.03, 0.14, vUv.y) * (1.0 - smoothstep(0.82, 1.0, vUv.y));
 
   float alpha = clamp(beams * 0.42 * pulse + roamingGlow * 0.075, 0.0, 0.36);
   gl_FragColor = vec4(vec3(1.0), alpha);
@@ -110,7 +110,7 @@ export function LandingBeams() {
       target.x = (x - 0.5) * 2
       target.y = (y - 0.5) * 2
       target.px = x * 100
-      target.py = 58 + y * 34
+      target.py = 8 + y * 84
     }
 
     const animatePointer = () => {
@@ -213,13 +213,6 @@ export function LandingBeams() {
       <div className="landing-smoke">
         <span />
         <span />
-      </div>
-      <div className="landing-architecture">
-        <div className="landing-architecture-zones">
-          <span />
-          <span />
-          <span />
-        </div>
       </div>
     </div>
   )

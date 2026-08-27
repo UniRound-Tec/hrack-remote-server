@@ -5,7 +5,8 @@ import { LandingBeams } from './LandingBeams'
 
 export function RouteBackdrop() {
   const pathname = usePathname()
-  return pathname === '/auth' ? (
+  const visible = pathname === '/auth' || pathname.startsWith('/dashboard')
+  return visible ? (
     <div className="route-landing-backdrop">
       <LandingBeams />
     </div>

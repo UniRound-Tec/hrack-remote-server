@@ -44,32 +44,32 @@ export const en = {
     pointKeys: ['desktop', 'phone', 'url'],
     login: {
       pageTitle: 'Sign in · HRack',
-      title: 'Plug into the remote console',
-      lead: 'Once you sign in, this page issues one remote URL. Your phone becomes the remote; the desktop session stays put.',
+      title: 'Continue your remote session',
+      lead: 'Sign in to handle desktop approvals and actions securely from your phone.',
       submit: 'Sign in',
       switchHint: 'No account yet?',
       switch: 'Register'
     },
     register: {
       pageTitle: 'Register · HRack',
-      title: 'Create a remote account',
-      lead: 'An account comes first. The desktop terminal does not move; approvals and questions travel to your phone.',
+      title: 'Create an account. Stay connected.',
+      lead: 'One secure link keeps your desktop session within reach.',
       submit: 'Create account and send code',
       switchHint: 'Already have an account?',
       switch: 'Sign in'
     },
     verify: {
       pageTitle: 'Verify email · HRack',
-      title: 'Enter your email code',
-      lead: 'The code is valid for 10 minutes. If several messages arrive, use the newest one.',
+      title: 'Verify your email to continue',
+      lead: 'Enter the latest 6-digit code we sent you.',
       submit: 'Verify and continue',
       switchHint: 'Need a different account?',
       switch: 'Back to sign in'
     },
     points: [
-      'The session keeps running on the desk. The native TUI does not leave the box.',
-      'Approvals, questions, errors \u2014 when a lamp lights, the phone can take it.',
-      'One URL is the whole handshake. No second terminal.'
+      'Desktop stays active',
+      'Secure link',
+      'Phone in control'
     ],
     email: 'Email',
     emailPlaceholder: 'you@studio.dev',
@@ -81,6 +81,8 @@ export const en = {
     submitting: 'Connecting\u2026',
     sendingCode: 'Sending verification code\u2026',
     createAccount: 'Create account',
+    mockLogin: 'Continue as root mock',
+    mockLoading: 'Opening root dashboard…',
     verifyLabel: 'email verification',
     otp: 'Verification code',
     otpPlaceholder: '000000',
@@ -123,6 +125,7 @@ export const en = {
     account: 'Current account',
     admin: 'Operator console',
     signOut: 'Sign out',
+    mockNotice: 'Mock preview: this URL is visual only and never connects to Relay or a real device.',
     status: { ready: 'Ready', recovering: 'Recovering', stale: 'Rotation required' },
     empty: {
       title: 'Create your remote entry point',
