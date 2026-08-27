@@ -166,6 +166,17 @@ export const en = {
       create: 'Create pairing URL',
       creating: 'Creating…'
     },
+    region: {
+      label: 'Relay region',
+      switchLabel: 'Switch Relay region',
+      switchHint: 'Choosing another region creates a new pairing URL.',
+      selected: 'Selected',
+      current: 'Current',
+      latency: 'Latency',
+      test: 'Test latency',
+      testing: 'Testing…',
+      failed: 'Unavailable'
+    },
     active: {
       title: 'Your pairing URL',
       lead: 'Copy it or scan the QR code to open it on another device.',
@@ -176,6 +187,7 @@ export const en = {
       copyFailed: 'Automatic copy failed. Select the URL and copy it manually.',
       rotate: 'Rotate URL',
       rotating: 'Rotating…',
+      switching: 'Switching…',
       revoke: 'Revoke URL',
       revoking: 'Revoking…',
       recovering: 'Relay is restoring this persistent URL. You do not need to create another one.'
@@ -189,6 +201,9 @@ export const en = {
       rotateTitle: 'Rotate the pairing URL?',
       rotateBody: 'Every saved copy of the old URL will stop working permanently, and a new URL will be created now.',
       rotate: 'Rotate URL',
+      switchTitle: 'Switch Relay region?',
+      switchBody: 'The pairing will move to {region}. The current URL will stop working and a new one will be created.',
+      switch: 'Switch region',
       revokeTitle: 'Revoke the pairing URL?',
       revokeBody: 'The old URL will stop working permanently. You must create another one for future remote access.',
       revoke: 'Revoke URL',

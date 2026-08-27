@@ -5,7 +5,8 @@ import {
   type PairingLifecycleErrorCode,
   type PairingView,
   revokeUserPairing,
-  rotateUserPairing
+  rotateUserPairing,
+  switchUserPairingNode
 } from './lifecycle'
 
 export type PairingActionError =
@@ -23,6 +24,7 @@ export interface PairingActionService {
   create(input?: unknown): Promise<PairingActionResult>
   revoke(expectedVersion: unknown): Promise<PairingActionResult>
   rotate(expectedVersion: unknown): Promise<PairingActionResult>
+  switchNode(input: unknown): Promise<PairingActionResult>
 }
 
 const UUID_PATTERN =
@@ -58,6 +60,36 @@ function parseCreateInput(value: unknown): string | undefined {
     /^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(value.nodeId)
     ? value.nodeId
     : undefined
+}
+
+function parseSwitchNodeInput(
+  value: unknown
+): { version: string; nodeId: string } | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined
+  }
+  const keys = Object.keys(value).sort()
+  if (
+    keys.length !== 2 ||
+    keys[0] !== 'nodeId' ||
+    keys[1] !== 'version' ||
+    !('version' in value) ||
+    !('nodeId' in value)
+  ) {
+    return undefined
+  }
+  const version = value.version
+  const nodeId = value.nodeId
+  if (
+    typeof version !== 'string' ||
+    version.length > 128 ||
+    !UUID_PATTERN.test(version) ||
+    typeof nodeId !== 'string' ||
+    !/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(nodeId)
+  ) {
+    return undefined
+  }
+  return { version, nodeId }
 }
 
 function safeActionError(error: unknown): PairingActionError {
@@ -103,6 +135,12 @@ export function createPairingActionService(
         const version = parseVersionInput(input)
         if (!version) throw new InvalidPairingActionInput()
         return rotateUserPairing(userId, version)
+      }),
+    switchNode: (input) =>
+      run((userId) => {
+        const parsed = parseSwitchNodeInput(input)
+        if (!parsed) throw new InvalidPairingActionInput()
+        return switchUserPairingNode(userId, parsed.version, parsed.nodeId)
       })
   }
 }

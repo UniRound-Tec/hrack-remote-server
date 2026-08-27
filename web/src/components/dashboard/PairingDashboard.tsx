@@ -7,7 +7,8 @@ import {
   createPairingAction,
   refreshPairingAction,
   revokePairingAction,
-  rotatePairingAction
+  rotatePairingAction,
+  switchPairingNodeAction
 } from '@/app/dashboard/actions'
 import { authClient } from '@/lib/auth-client'
 import type {
@@ -23,10 +24,12 @@ import {
   ArrowUpRight,
   Check,
   Copy,
+  Gauge,
   KeyRound,
   Link2,
   LoaderCircle,
   LogOut,
+  MapPin,
   RefreshCw,
   RotateCcw,
   ShieldCheck,
@@ -44,28 +47,36 @@ import {
   type ReactNode
 } from 'react'
 
-type PendingOperation = 'create' | 'rotate' | 'revoke' | null
-type Confirmation = 'rotate' | 'revoke' | null
+type PendingOperation = 'create' | 'rotate' | 'switch' | 'revoke' | null
+type Confirmation = 'rotate' | 'switch' | 'revoke' | null
 
-function mockPairing(): Extract<PairingView, { kind: 'ready' | 'recovering' }> {
+function mockPairing(
+  node: PublicRelayNode = {
+    id: 'us-1',
+    region: 'us',
+    label: 'United States',
+    healthUrl: 'https://remote.hrack.invalid/remote/healthz'
+  }
+): Extract<PairingView, { kind: 'ready' | 'recovering' }> {
   const version = crypto.randomUUID()
   return {
     kind: 'ready',
     version,
     joinUrl: `https://remote.hrack.invalid/mock/${version}`,
     createdAt: Date.now(),
-    nodeId: 'us-1',
-    region: 'us',
-    nodeLabel: 'United States'
+    nodeId: node.id,
+    region: node.region,
+    nodeLabel: node.label
   }
 }
 
 function mockPairingAction(
-  operation: Exclude<PendingOperation, null>
+  operation: Exclude<PendingOperation, null>,
+  node?: PublicRelayNode
 ): Promise<PairingActionResult> {
   return Promise.resolve({
     ok: true,
-    pairing: operation === 'revoke' ? { kind: 'empty' } : mockPairing()
+    pairing: operation === 'revoke' ? { kind: 'empty' } : mockPairing(node)
   })
 }
 
@@ -94,6 +105,9 @@ export function PairingDashboard({
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [selectedNodeId, setSelectedNodeId] = useState(
     relayNodes[0]?.id ?? 'us-1'
+  )
+  const [switchTargetNodeId, setSwitchTargetNodeId] = useState<string | null>(
+    null
   )
   const active = pairing.kind === 'ready' || pairing.kind === 'recovering'
   const qrSource = useMemo(
@@ -260,7 +274,11 @@ export function PairingDashboard({
                 void apply(
                   'create',
                   isMock
-                    ? () => mockPairingAction('create')
+                    ? () =>
+                        mockPairingAction(
+                          'create',
+                          relayNodes.find((node) => node.id === selectedNodeId)
+                        )
                     : () => createPairingAction({ nodeId: selectedNodeId })
                 )
               }
@@ -280,8 +298,13 @@ export function PairingDashboard({
               pending={pending}
               lang={lang}
               isMock={isMock}
+              relayNodes={relayNodes}
               onCopy={() => void copyUrl()}
               onRotate={() => setConfirmation('rotate')}
+              onSwitch={(nodeId) => {
+                setSwitchTargetNodeId(nodeId)
+                setConfirmation('switch')
+              }}
               onRevoke={() => setConfirmation('revoke')}
             />
           )}
@@ -327,22 +350,31 @@ export function PairingDashboard({
           <div className="p-6 sm:p-7">
             <div className="flex items-start gap-4">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-strong text-text-secondary">
-                {confirmation === 'rotate' ? (
-                  <RotateCcw className="size-5" />
-                ) : (
+                {confirmation === 'revoke' ? (
                   <Trash2 className="size-5" />
+                ) : (
+                  <RotateCcw className="size-5" />
                 )}
               </span>
               <div>
                 <h2 className="text-[18px] font-semibold tracking-tight">
                   {confirmation === 'rotate'
                     ? strings.dashboard.confirm.rotateTitle
-                    : strings.dashboard.confirm.revokeTitle}
+                    : confirmation === 'switch'
+                      ? strings.dashboard.confirm.switchTitle
+                      : strings.dashboard.confirm.revokeTitle}
                 </h2>
                 <p className="mt-2 text-[13px] leading-6 text-text-muted">
                   {confirmation === 'rotate'
                     ? strings.dashboard.confirm.rotateBody
-                    : strings.dashboard.confirm.revokeBody}
+                    : confirmation === 'switch'
+                        ? strings.dashboard.confirm.switchBody.replace(
+                          '{region}',
+                          relayNodes.find(
+                            (node) => node.id === switchTargetNodeId
+                          )?.label ?? ''
+                        )
+                      : strings.dashboard.confirm.revokeBody}
                 </p>
               </div>
             </div>
@@ -360,14 +392,33 @@ export function PairingDashboard({
                 disabled={pending !== null}
                 onClick={() => {
                   if (pairing.kind === 'empty') return
+                  if (confirmation === 'switch' && !switchTargetNodeId) return
                   const input = { version: pairing.version }
                   void apply(
                     confirmation,
                     isMock
-                      ? () => mockPairingAction(confirmation)
+                      ? () =>
+                          mockPairingAction(
+                            confirmation,
+                            confirmation === 'switch'
+                              ? relayNodes.find(
+                                  (node) => node.id === switchTargetNodeId
+                                )
+                              : pairing.kind === 'ready' ||
+                                  pairing.kind === 'recovering'
+                                ? relayNodes.find(
+                                    (node) => node.id === pairing.nodeId
+                                  )
+                                : undefined
+                          )
                       : confirmation === 'rotate'
                         ? () => rotatePairingAction(input)
-                        : () => revokePairingAction(input)
+                        : confirmation === 'switch'
+                          ? () => switchPairingNodeAction({
+                              ...input,
+                              nodeId: switchTargetNodeId
+                            })
+                          : () => revokePairingAction(input)
                   )
                 }}
                 className="hrack-press inline-flex h-9 items-center gap-2 rounded-md bg-button-primary px-4 text-[13px] font-medium text-button-primary-fg hover:bg-button-primary-hover disabled:opacity-50"
@@ -379,6 +430,10 @@ export function PairingDashboard({
                   ? pending === 'rotate'
                     ? strings.dashboard.active.rotating
                     : strings.dashboard.confirm.rotate
+                  : confirmation === 'switch'
+                    ? pending === 'switch'
+                      ? strings.dashboard.active.switching
+                      : strings.dashboard.confirm.switch
                   : pending === 'revoke'
                     ? strings.dashboard.active.revoking
                     : strings.dashboard.confirm.revoke}
@@ -407,7 +462,7 @@ function EmptyPairing({
   const { strings } = useLang()
   return (
     <div className="grid min-h-80 place-items-center px-6 py-14 text-center sm:px-10">
-      <div className="max-w-lg">
+      <div className="w-full max-w-2xl">
         <span className="mx-auto flex size-12 items-center justify-center rounded-full border border-border-default bg-surface-strong text-text-muted">
           <Link2 className="size-5" strokeWidth={1.6} />
         </span>
@@ -417,26 +472,23 @@ function EmptyPairing({
         <p className="mx-auto mt-3 max-w-md text-[13px] leading-6 text-text-muted">
           {strings.dashboard.empty.lead}
         </p>
-        <label className="mx-auto mt-6 block max-w-xs text-left font-maple text-[10px] tracking-[0.14em] text-text-faint uppercase">
-          Relay region
-          <select
-            value={selectedNodeId}
-            disabled={pending || relayNodes.length === 0}
-            onChange={(event) => onNodeChange(event.currentTarget.value)}
-            className="mt-2 h-10 w-full rounded-md border border-border-default bg-content px-3 font-sans text-[13px] tracking-normal text-text-primary normal-case outline-none focus:border-border-strong focus:ring-2 focus:ring-focus-ring/30 disabled:opacity-55"
-          >
-            {relayNodes.map((node) => (
-              <option key={node.id} value={node.id}>
-                {node.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="mx-auto mt-7 w-full max-w-[40rem] text-left">
+          <p className="font-maple text-[10px] tracking-[0.14em] text-text-faint uppercase">
+            {strings.dashboard.region.label}
+          </p>
+          <RegionCards
+            nodes={relayNodes}
+            selectedNodeId={selectedNodeId}
+            selectedLabel={strings.dashboard.region.selected}
+            disabled={pending}
+            onSelect={onNodeChange}
+          />
+        </div>
         <button
           type="button"
           disabled={pending || relayNodes.length === 0}
           onClick={onCreate}
-          className="hrack-press mt-7 inline-flex h-10 items-center gap-2 rounded-md bg-button-primary px-5 text-[13px] font-medium text-button-primary-fg hover:bg-button-primary-hover disabled:opacity-55"
+          className="hrack-press mt-8 inline-flex h-11 items-center gap-2 rounded-lg bg-button-primary px-6 text-[13px] font-medium text-button-primary-fg shadow-[0_12px_25px_-15px_var(--hrack-shadow-popover)] hover:bg-button-primary-hover disabled:opacity-55"
         >
           {pending ? <LoaderCircle className="size-4 animate-spin" /> : <Link2 className="size-4" />}
           {pending
@@ -492,8 +544,10 @@ function ActivePairing({
   pending,
   lang,
   isMock,
+  relayNodes,
   onCopy,
   onRotate,
+  onSwitch,
   onRevoke
 }: {
   pairing: Extract<PairingView, { kind: 'ready' | 'recovering' }>
@@ -504,8 +558,10 @@ function ActivePairing({
   pending: PendingOperation
   lang: Locale
   isMock: boolean
+  relayNodes: PublicRelayNode[]
   onCopy: () => void
   onRotate: () => void
+  onSwitch: (nodeId: string) => void
   onRevoke: () => void
 }) {
   const { strings } = useLang()
@@ -574,6 +630,30 @@ function ActivePairing({
             }).format(pairing.createdAt)}
           </time>
         </p>
+
+        {relayNodes.length > 1 ? (
+          <div className="mt-6">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="font-maple text-[10px] tracking-[0.14em] text-text-faint uppercase">
+                  {strings.dashboard.region.switchLabel}
+                </p>
+                <p className="mt-1 text-[11px] text-text-muted">
+                  {strings.dashboard.region.switchHint}
+                </p>
+              </div>
+            </div>
+            <RegionCards
+              nodes={relayNodes}
+              selectedNodeId={pairing.nodeId}
+              selectedLabel={strings.dashboard.region.current}
+              disabled={destructiveDisabled}
+              onSelect={(nodeId) => {
+                if (nodeId !== pairing.nodeId) onSwitch(nodeId)
+              }}
+            />
+          </div>
+        ) : null}
 
         <div className="mt-8 flex flex-wrap gap-2 border-t border-border-subtle pt-6">
           <button
@@ -648,5 +728,131 @@ function StatusPill({ kind }: { kind: 'ready' | 'recovering' | 'stale' }) {
       {item.icon}
       {item.label}
     </span>
+  )
+}
+
+type LatencyResult =
+  | { kind: 'idle' }
+  | { kind: 'testing' }
+  | { kind: 'ready'; milliseconds: number }
+  | { kind: 'failed' }
+
+function RegionCards({
+  nodes,
+  selectedNodeId,
+  selectedLabel,
+  disabled,
+  onSelect
+}: {
+  nodes: PublicRelayNode[]
+  selectedNodeId: string
+  selectedLabel: string
+  disabled: boolean
+  onSelect: (nodeId: string) => void
+}) {
+  const { strings } = useLang()
+  const [latency, setLatency] = useState<Record<string, LatencyResult>>({})
+
+  async function measure(node: PublicRelayNode): Promise<void> {
+    setLatency((current) => ({ ...current, [node.id]: { kind: 'testing' } }))
+    const startedAt = performance.now()
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 6_000)
+    try {
+      const url = new URL(node.healthUrl)
+      url.searchParams.set('_latency', crypto.randomUUID())
+      const sameOrigin = url.origin === window.location.origin
+      const response = await fetch(url, {
+        cache: 'no-store',
+        mode: sameOrigin ? 'same-origin' : 'no-cors',
+        signal: controller.signal
+      })
+      if (sameOrigin && !response.ok) throw new Error('Relay health failed')
+      const milliseconds = Math.max(1, Math.round(performance.now() - startedAt))
+      setLatency((current) => ({
+        ...current,
+        [node.id]: { kind: 'ready', milliseconds }
+      }))
+    } catch {
+      setLatency((current) => ({ ...current, [node.id]: { kind: 'failed' } }))
+    } finally {
+      window.clearTimeout(timeout)
+    }
+  }
+
+  return (
+    <div className="mt-2.5 grid w-full gap-3 sm:grid-cols-2">
+      {nodes.map((node) => {
+        const selected = node.id === selectedNodeId
+        const result = latency[node.id] ?? { kind: 'idle' as const }
+        return (
+          <div
+            key={node.id}
+            className={`group relative min-w-0 overflow-hidden rounded-2xl border bg-[linear-gradient(145deg,var(--hrack-bg-content)_0%,color-mix(in_srgb,var(--hrack-bg-surface-strong)_38%,var(--hrack-bg-content))_100%)] text-left transition-[border-color,box-shadow,transform] duration-200 ${
+              selected
+                ? 'border-border-strong shadow-[0_16px_38px_-25px_var(--hrack-shadow-popover)] ring-1 ring-black/5'
+                : 'border-border-default shadow-[0_12px_32px_-27px_var(--hrack-shadow-popover)] hover:-translate-y-px hover:border-border-strong hover:shadow-[0_18px_38px_-24px_var(--hrack-shadow-popover)]'
+            }`}
+          >
+            {selected ? (
+              <span className="pointer-events-none absolute top-3.5 right-3.5 z-10 inline-flex h-6 min-w-[3.75rem] items-center justify-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--hrack-status-done)_10%,white)] px-2 font-maple text-[9px] text-status-done">
+                <Check className="size-3" strokeWidth={2.2} />
+                {selectedLabel}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              disabled={disabled || selected}
+              onClick={() => onSelect(node.id)}
+              className="hrack-press block min-h-[5.75rem] w-full px-4 py-4 text-left disabled:cursor-default"
+              aria-pressed={selected}
+            >
+              <span className="flex items-center gap-3.5">
+                <span
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+                    selected
+                      ? 'border-[color-mix(in_srgb,var(--hrack-status-done)_18%,transparent)] bg-[color-mix(in_srgb,var(--hrack-status-done)_7%,white)] text-status-done'
+                      : 'border-border-subtle bg-surface-strong text-text-muted group-hover:text-text-secondary'
+                  }`}
+                >
+                  <MapPin className="size-[18px]" strokeWidth={1.65} />
+                </span>
+                <span className="min-w-0 flex-1 pr-[4.25rem]">
+                  <span className="block truncate text-[14px] font-medium tracking-[-0.01em] text-text-primary">
+                    {node.label}
+                  </span>
+                </span>
+              </span>
+            </button>
+            <div className="mx-4 border-t border-border-subtle">
+              <button
+                type="button"
+                disabled={disabled || result.kind === 'testing'}
+                onClick={() => void measure(node)}
+                className="hrack-press flex h-11 w-full items-center justify-between rounded-md text-[10px] text-text-muted hover:text-text-secondary disabled:opacity-55"
+              >
+                <span className="inline-flex items-center gap-1.5 font-maple tracking-[0.04em]">
+                  {result.kind === 'testing' ? (
+                    <LoaderCircle className="size-3 animate-spin" />
+                  ) : (
+                    <Gauge className="size-3" strokeWidth={1.8} />
+                  )}
+                  {strings.dashboard.region.latency}
+                </span>
+                <span className="font-maple text-text-secondary">
+                  {result.kind === 'testing'
+                    ? strings.dashboard.region.testing
+                    : result.kind === 'ready'
+                      ? `${result.milliseconds} ms`
+                      : result.kind === 'failed'
+                        ? strings.dashboard.region.failed
+                        : strings.dashboard.region.test}
+                </span>
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }

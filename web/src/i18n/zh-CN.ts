@@ -168,6 +168,17 @@ export const zhCN = {
       create: '创建配对 URL',
       creating: '正在创建…'
     },
+    region: {
+      label: 'Relay 区域',
+      switchLabel: '切换 Relay 区域',
+      switchHint: '选择其他区域会重新生成配对 URL。',
+      selected: '已选择',
+      current: '当前',
+      latency: '延迟',
+      test: '测试延迟',
+      testing: '测试中…',
+      failed: '无法连接'
+    },
     active: {
       title: '你的配对 URL',
       lead: '复制或扫描二维码，在另一台设备上打开。',
@@ -178,6 +189,7 @@ export const zhCN = {
       copyFailed: '无法自动复制，请选中 URL 手动复制。',
       rotate: '轮换 URL',
       rotating: '正在轮换…',
+      switching: '正在切换…',
       revoke: '吊销 URL',
       revoking: '正在吊销…',
       recovering: 'Relay 正在恢复这条持久 URL，无需重新创建。'
@@ -191,6 +203,9 @@ export const zhCN = {
       rotateTitle: '轮换配对 URL？',
       rotateBody: '所有已保存的旧地址会永久失效，并立即生成一条新地址。',
       rotate: '确认轮换',
+      switchTitle: '切换 Relay 区域？',
+      switchBody: '配对将迁移到 {region}。当前 URL 会失效，并重新生成一条新 URL。',
+      switch: '确认切换',
       revokeTitle: '吊销配对 URL？',
       revokeBody: '旧地址会永久失效。之后如需远程访问，必须重新创建。',
       revoke: '确认吊销',

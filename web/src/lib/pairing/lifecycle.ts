@@ -437,6 +437,22 @@ export async function rotateUserPairing(
   userId: string,
   expectedVersion: string
 ): Promise<PairingView> {
+  return replaceUserPairing(userId, expectedVersion)
+}
+
+export async function switchUserPairingNode(
+  userId: string,
+  expectedVersion: string,
+  targetNodeId: string
+): Promise<PairingView> {
+  return replaceUserPairing(userId, expectedVersion, targetNodeId)
+}
+
+async function replaceUserPairing(
+  userId: string,
+  expectedVersion: string,
+  targetNodeId?: string
+): Promise<PairingView> {
   const current = getDb()
     .select({
       id: pairings.id,
@@ -457,12 +473,14 @@ export async function rotateUserPairing(
   if (!current) return getUserPairing(userId)
 
   const config = lifecycleConfig()
-  const relayConfig = relayLifecycleConfig(config, current.nodeId)
+  const oldRelayConfig = relayLifecycleConfig(config, current.nodeId)
+  const candidateNodeId = targetNodeId ?? current.nodeId
+  const candidateRelayConfig = relayLifecycleConfig(config, candidateNodeId)
   const oldRevokeToken =
     current.status === 'active'
       ? openPairingRevokeToken(current.revokeTokenEnc)
       : undefined
-  const candidate = await createRelayRoom(relayConfig)
+  const candidate = await createRelayRoom(candidateRelayConfig)
   const candidateId = randomUUID()
   const now = Date.now()
 
@@ -487,7 +505,7 @@ export async function rotateUserPairing(
           id: candidateId,
           userId,
           roomId: candidate.roomId,
-          nodeId: current.nodeId,
+          nodeId: candidateNodeId,
           joinUrl: candidate.joinUrl,
           revokeTokenEnc: sealPairingRevokeToken(candidate.revokeToken),
           status: 'active',
@@ -496,7 +514,7 @@ export async function rotateUserPairing(
         .run()
     })
   } catch (error) {
-    await revokeRelayRoom(relayConfig, candidate).catch(() => undefined)
+    await revokeRelayRoom(candidateRelayConfig, candidate).catch(() => undefined)
     if (
       isUniqueConstraint(error) ||
       (error instanceof PairingLifecycleError &&
@@ -509,7 +527,7 @@ export async function rotateUserPairing(
   }
 
   if (oldRevokeToken) {
-    await revokeRelayRoom(relayConfig, {
+    await revokeRelayRoom(oldRelayConfig, {
       roomId: current.roomId,
       revokeToken: oldRevokeToken
     }).catch(() => undefined)

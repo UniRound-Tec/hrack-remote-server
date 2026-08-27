@@ -15,10 +15,34 @@ const relayOrigin =
   process.env.RELAY_INTERNAL_ORIGIN ?? 'http://127.0.0.1:3001'
 
 const isDev = process.env.NODE_ENV === 'development'
+
+function relayConnectSources(): string {
+  const raw = process.env.RELAY_NODES_JSON
+  if (!raw) return ''
+  try {
+    const nodes: unknown = JSON.parse(raw)
+    if (!Array.isArray(nodes)) return ''
+    const origins = new Set<string>()
+    for (const node of nodes) {
+      if (typeof node !== 'object' || node === null) continue
+      const value = (node as Record<string, unknown>).relayPublicOrigin
+      if (typeof value !== 'string') continue
+      const url = new URL(value)
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        origins.add(url.origin)
+      }
+    }
+    return [...origins].join(' ')
+  } catch {
+    return ''
+  }
+}
+
+const relaySources = relayConnectSources()
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
-  "connect-src 'self'",
+  `connect-src 'self'${relaySources ? ` ${relaySources}` : ''}`,
   "font-src 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",

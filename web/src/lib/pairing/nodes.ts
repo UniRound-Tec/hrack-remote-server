@@ -13,6 +13,7 @@ export interface PublicRelayNode {
   id: string
   region: string
   label: string
+  healthUrl: string
 }
 
 interface RelayNodeEnv {
@@ -167,11 +168,14 @@ export function enabledRelayNodes(nodes = loadRelayNodes()): RelayNode[] {
 }
 
 export function publicRelayNodes(nodes = loadRelayNodes()): PublicRelayNode[] {
-  return enabledRelayNodes(nodes).map(({ id, region, label }) => ({
-    id,
-    region,
-    label
-  }))
+  return enabledRelayNodes(nodes).map(
+    ({ id, region, label, relayPublicOrigin }) => ({
+      id,
+      region,
+      label,
+      healthUrl: `${relayPublicOrigin}/remote/healthz`
+    })
+  )
 }
 
 export function relayNodeById(

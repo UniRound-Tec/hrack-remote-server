@@ -39,3 +39,9 @@ export async function rotatePairingAction(input: unknown) {
   if (result.ok) revalidatePath('/dashboard')
   return result
 }
+
+export async function switchPairingNodeAction(input: unknown) {
+  const result = await pairingActions.switchNode(input)
+  if (result.ok) revalidatePath('/dashboard')
+  return result
+}

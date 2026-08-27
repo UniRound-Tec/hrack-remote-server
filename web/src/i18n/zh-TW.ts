@@ -165,6 +165,17 @@ export const zhTW = {
       create: '建立配對 URL',
       creating: '正在建立…'
     },
+    region: {
+      label: 'Relay 區域',
+      switchLabel: '切換 Relay 區域',
+      switchHint: '選擇其他區域會重新產生配對 URL。',
+      selected: '已選擇',
+      current: '目前',
+      latency: '延遲',
+      test: '測試延遲',
+      testing: '測試中…',
+      failed: '無法連線'
+    },
     active: {
       title: '你的配對 URL',
       lead: '複製或掃描 QR code，在另一台裝置上開啟。',
@@ -175,6 +186,7 @@ export const zhTW = {
       copyFailed: '無法自動複製，請選取 URL 手動複製。',
       rotate: '輪換 URL',
       rotating: '正在輪換…',
+      switching: '正在切換…',
       revoke: '撤銷 URL',
       revoking: '正在撤銷…',
       recovering: 'Relay 正在恢復這條持久 URL，不需要重新建立。'
@@ -188,6 +200,9 @@ export const zhTW = {
       rotateTitle: '輪換配對 URL？',
       rotateBody: '所有已儲存的舊網址會永久失效，並立即產生一條新網址。',
       rotate: '確認輪換',
+      switchTitle: '切換 Relay 區域？',
+      switchBody: '配對將移至 {region}。目前 URL 會失效，並重新產生一條新 URL。',
+      switch: '確認切換',
       revokeTitle: '撤銷配對 URL？',
       revokeBody: '舊網址會永久失效。之後如需遠端存取，必須重新建立。',
       revoke: '確認撤銷',

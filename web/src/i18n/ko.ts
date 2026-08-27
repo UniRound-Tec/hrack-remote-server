@@ -165,6 +165,17 @@ export const ko = {
       create: '페어링 URL 만들기',
       creating: '만드는 중…'
     },
+    region: {
+      label: 'Relay 지역',
+      switchLabel: 'Relay 지역 전환',
+      switchHint: '다른 지역을 선택하면 페어링 URL이 다시 생성됩니다.',
+      selected: '선택됨',
+      current: '현재',
+      latency: '지연 시간',
+      test: '지연 시간 테스트',
+      testing: '테스트 중…',
+      failed: '연결 불가'
+    },
     active: {
       title: '페어링 URL',
       lead: '복사하거나 QR 코드를 스캔해 다른 기기에서 여세요.',
@@ -175,6 +186,7 @@ export const ko = {
       copyFailed: '자동 복사에 실패했습니다. URL을 선택해 직접 복사하세요.',
       rotate: 'URL 교체',
       rotating: '교체 중…',
+      switching: '전환 중…',
       revoke: 'URL 폐기',
       revoking: '폐기 중…',
       recovering: 'Relay가 이 영구 URL을 복구하고 있습니다. 다시 만들 필요가 없습니다.'
@@ -188,6 +200,9 @@ export const ko = {
       rotateTitle: '페어링 URL을 교체할까요?',
       rotateBody: '저장된 모든 이전 URL은 영구적으로 작동하지 않으며 새 URL이 즉시 생성됩니다.',
       rotate: 'URL 교체',
+      switchTitle: 'Relay 지역을 전환할까요?',
+      switchBody: '페어링을 {region}(으)로 이동합니다. 현재 URL은 중지되고 새 URL이 생성됩니다.',
+      switch: '지역 전환',
       revokeTitle: '페어링 URL을 폐기할까요?',
       revokeBody: '이전 URL은 영구적으로 작동하지 않습니다. 이후 원격 접속에는 새 URL이 필요합니다.',
       revoke: 'URL 폐기',

@@ -165,6 +165,17 @@ export const ja = {
       create: 'ペアリング URL を作成',
       creating: '作成中…'
     },
+    region: {
+      label: 'Relay リージョン',
+      switchLabel: 'Relay リージョンを切り替え',
+      switchHint: '別のリージョンを選ぶと、ペアリング URL が再生成されます。',
+      selected: '選択中',
+      current: '現在',
+      latency: '遅延',
+      test: '遅延をテスト',
+      testing: 'テスト中…',
+      failed: '接続不可'
+    },
     active: {
       title: 'ペアリング URL',
       lead: 'コピーするか QR コードを読み取り、別の端末で開いてください。',
@@ -175,6 +186,7 @@ export const ja = {
       copyFailed: '自動コピーに失敗しました。URL を選択して手動でコピーしてください。',
       rotate: 'URL をローテーション',
       rotating: 'ローテーション中…',
+      switching: '切り替え中…',
       revoke: 'URL を無効化',
       revoking: '無効化中…',
       recovering: 'Relay がこの永続 URL を復旧しています。再作成は不要です。'
@@ -188,6 +200,9 @@ export const ja = {
       rotateTitle: 'ペアリング URL をローテーションしますか？',
       rotateBody: '保存済みの古い URL はすべて永久に無効になり、新しい URL がすぐに作成されます。',
       rotate: 'ローテーション',
+      switchTitle: 'Relay リージョンを切り替えますか？',
+      switchBody: 'ペアリングを {region} に移動します。現在の URL は無効になり、新しい URL が作成されます。',
+      switch: 'リージョンを切り替え',
       revokeTitle: 'ペアリング URL を無効化しますか？',
       revokeBody: '古い URL は永久に無効になります。今後リモート接続するには再作成が必要です。',
       revoke: '無効化',
