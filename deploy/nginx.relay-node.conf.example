@@ -25,6 +25,15 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/relay-cn.hrack.dev/privkey.pem;
     add_header Strict-Transport-Security "max-age=31536000" always;
 
+    location = /remote/v1/system {
+        access_log off;
+        allow CONTROL_CENTER_IP;
+        deny all;
+        proxy_pass http://127.0.0.1:8788;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+    }
+
     location ^~ /remote/v1/system/ {
         access_log off;
         allow CONTROL_CENTER_IP;
