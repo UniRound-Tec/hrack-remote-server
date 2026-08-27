@@ -12,13 +12,18 @@ const BASE_URL = 'http://localhost:3000'
 const PASSWORD = 'correct horse battery staple'
 const dirs: string[] = []
 
-function jsonRequest(pathname: string, body: Record<string, unknown>): Request {
+function jsonRequest(
+  pathname: string,
+  body: Record<string, unknown>,
+  cookie?: string
+): Request {
   return new Request(`${BASE_URL}/api/auth${pathname}`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       origin: BASE_URL,
-      'x-real-ip': '127.0.0.1'
+      'x-real-ip': '127.0.0.1',
+      ...(cookie ? { cookie } : {})
     },
     body: JSON.stringify(body)
   })
@@ -195,6 +200,57 @@ describe('Better Auth contract', () => {
     )
     expect(login.status).toBe(200)
     expect(login.headers.get('set-cookie')).toContain('better-auth.session_token')
+  })
+
+  it('changes an authenticated credential password only after verifying the current password', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    const auth = testAuth(false)
+    const email = 'change-password@example.test'
+    const nextPassword = 'updated horse battery staple'
+    const registration = await signUp(auth, email)
+    const cookie = cookieHeader(registration)
+
+    const rejected = await auth.handler(
+      jsonRequest(
+        '/change-password',
+        {
+          currentPassword: 'not-the-current-password',
+          newPassword: nextPassword,
+          revokeOtherSessions: true
+        },
+        cookie
+      )
+    )
+    expect(rejected.status).toBe(400)
+    await expect(rejected.json()).resolves.toMatchObject({
+      code: 'INVALID_PASSWORD'
+    })
+
+    const changed = await auth.handler(
+      jsonRequest(
+        '/change-password',
+        {
+          currentPassword: PASSWORD,
+          newPassword: nextPassword,
+          revokeOtherSessions: true
+        },
+        cookie
+      )
+    )
+    expect(changed.status).toBe(200)
+    expect(changed.headers.get('set-cookie')).toContain(
+      'better-auth.session_token'
+    )
+
+    const oldLogin = await auth.handler(
+      jsonRequest('/sign-in/email', { email, password: PASSWORD })
+    )
+    expect(oldLogin.status).toBe(401)
+
+    const newLogin = await auth.handler(
+      jsonRequest('/sign-in/email', { email, password: nextPassword })
+    )
+    expect(newLogin.status).toBe(200)
   })
 
   it('keeps fresh and duplicate registration response key order identical', async () => {

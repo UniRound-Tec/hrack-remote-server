@@ -91,6 +91,7 @@ export function createAuth(
       customRules: {
         '/sign-up/email': { window: 60, max: 10 },
         '/sign-in/email': { window: 60, max: 10 },
+        '/change-password': { window: 60, max: 5 },
         '/email-otp/send-verification-otp': { window: 60, max: 5 },
         '/email-otp/verify-email': { window: 60, max: 10 }
       }

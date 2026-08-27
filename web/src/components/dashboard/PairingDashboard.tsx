@@ -2,6 +2,7 @@
 
 import { Brand } from '@/components/Brand'
 import { LanguageMenu } from '@/components/LanguageMenu'
+import { ChangePasswordDialog } from '@/components/dashboard/ChangePasswordDialog'
 import {
   createPairingAction,
   refreshPairingAction,
@@ -21,6 +22,7 @@ import {
   ArrowUpRight,
   Check,
   Copy,
+  KeyRound,
   Link2,
   LoaderCircle,
   LogOut,
@@ -83,6 +85,7 @@ export function PairingDashboard({
   const [error, setError] = useState<PairingActionError | null>(null)
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
   const active = pairing.kind === 'ready' || pairing.kind === 'recovering'
   const qrSource = useMemo(
     () => (active ? pairingQrDataUrl(pairing.joinUrl) : null),
@@ -191,6 +194,15 @@ export function PairingDashboard({
               {email}
             </span>
             <LanguageMenu compact />
+            <button
+              type="button"
+              onClick={() => setPasswordOpen(true)}
+              className="hrack-press hrack-press-chip inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[12px] text-text-muted hover:bg-surface-strong hover:text-text-secondary"
+              aria-label={strings.dashboard.password.trigger}
+            >
+              <KeyRound className="size-3.5" strokeWidth={1.75} />
+              <span className="hidden lg:inline">{strings.dashboard.password.trigger}</span>
+            </button>
             {isAdmin ? (
               <Link
                 href="/admin"
@@ -281,6 +293,12 @@ export function PairingDashboard({
           {strings.dashboard.account}: <span className="truncate">{email}</span>
         </p>
       </main>
+
+      <ChangePasswordDialog
+        open={passwordOpen}
+        isMock={isMock}
+        onOpenChange={setPasswordOpen}
+      />
 
       <dialog
         ref={confirmDialog}
