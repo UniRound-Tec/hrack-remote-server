@@ -25,6 +25,8 @@ test-results/
 *.tsbuildinfo
 coverage/
 deploy/backups/
+deploy/acme-webroot/
+deploy/certs/
 .shots/
 .next/
 web/data/

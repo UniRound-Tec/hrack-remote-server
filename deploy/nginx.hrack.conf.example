@@ -25,8 +25,17 @@ map $http_x_real_ip $forwarded_real_ip {
 server {
     listen 80;
     server_name _;
-    # 证书就绪后重定向到 https；本地调试可注释
-    return 301 https://$host$request_uri;
+
+    # ACME webroot 续期必须保持 HTTP 可达，其余请求再跳转 HTTPS。
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
 }
 
 server {
@@ -34,6 +43,7 @@ server {
     http2 on;
     server_name hrack.example;
     absolute_redirect off;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     ssl_certificate     /etc/nginx/certs/fullchain.pem;
     ssl_certificate_key /etc/nginx/certs/privkey.pem;
@@ -48,6 +58,7 @@ server {
     http2 on;
     server_name dsh.hrack.example;
     absolute_redirect off;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     ssl_certificate     /etc/nginx/certs/fullchain.pem;
     ssl_certificate_key /etc/nginx/certs/privkey.pem;

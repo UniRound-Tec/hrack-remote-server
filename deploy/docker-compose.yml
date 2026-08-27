@@ -200,6 +200,7 @@ services:
       - ./nginx.hrack.conf.example:/etc/nginx/conf.d/default.conf:ro
       - ./nginx.routes.conf:/etc/nginx/hrack.routes.conf:ro
       - ./nginx.dsh.routes.conf:/etc/nginx/hrack.dsh.routes.conf:ro
+      - ./acme-webroot:/var/www/certbot:ro
       # 证书路径按实际环境替换
       - ./certs:/etc/nginx/certs:ro
     restart: unless-stopped
