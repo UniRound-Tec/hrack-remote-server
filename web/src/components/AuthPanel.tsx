@@ -4,6 +4,7 @@ import Github from '@lobehub/icons/es/Github/components/Mono'
 import Google from '@lobehub/icons/es/Google/components/Color'
 import { useLang } from '@/i18n/lang-context'
 import { authClient } from '@/lib/auth-client'
+import type { AuthMethods } from '@/lib/auth-methods'
 import { allowNext } from '@/lib/auth-navigation'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Eye, EyeOff, Mail } from 'lucide-react'
@@ -49,13 +50,6 @@ type Feedback =
   | 'emailNotFound'
   | 'generic'
 
-type AuthMethods = {
-  github: boolean
-  google: boolean
-  'linux-do': boolean
-  emailVerificationRequired: boolean
-}
-
 type OAuthProvider = 'github' | 'google' | 'linux-do'
 
 type ClientError = {
@@ -81,10 +75,12 @@ function errorFeedback(error: ClientError, otp = false): Feedback {
 }
 
 export function AuthPanel({
+  initialMethods,
   initialMode = 'login',
   nextPath,
   initialError
 }: {
+  initialMethods: AuthMethods
   initialMode?: Exclude<AuthMode, 'verify'>
   nextPath?: string
   initialError?: AuthPageError
@@ -110,7 +106,7 @@ export function AuthPanel({
   const [oauthSubmitting, setOauthSubmitting] = useState<OAuthProvider | null>(
     null
   )
-  const [methods, setMethods] = useState<AuthMethods | null>(null)
+  const methods = initialMethods
   const [cooldown, setCooldown] = useState(0)
   const [feedback, setFeedback] = useState<Feedback | null>(() => {
     if (initialError === 'email_not_found') return 'emailNotFound'
@@ -122,16 +118,6 @@ export function AuthPanel({
   useEffect(() => {
     document.title = copy.pageTitle
   }, [copy.pageTitle])
-
-  useEffect(() => {
-    void fetch('/api/public/auth-methods', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('auth methods unavailable')
-        return (await response.json()) as AuthMethods
-      })
-      .then(setMethods)
-      .catch(() => setFeedback('generic'))
-  }, [])
 
   useEffect(() => {
     if (mode !== 'verify' || email) return
@@ -187,22 +173,6 @@ export function AuthPanel({
     return next
   }
 
-  async function ensureMethods(): Promise<AuthMethods | null> {
-    if (methods) return methods
-    try {
-      const response = await fetch('/api/public/auth-methods', {
-        cache: 'no-store'
-      })
-      if (!response.ok) throw new Error('auth methods unavailable')
-      const loaded = (await response.json()) as AuthMethods
-      setMethods(loaded)
-      return loaded
-    } catch {
-      setFeedback('generic')
-      return null
-    }
-  }
-
   function finish(): void {
     window.location.assign(allowNext(nextPath) ?? '/dashboard')
   }
@@ -233,9 +203,6 @@ export function AuthPanel({
         return
       }
 
-      const authMethods = await ensureMethods()
-      if (!authMethods) return
-
       if (mode === 'register') {
         const result = await authClient.signUp.email({
           email: normalized,
@@ -247,7 +214,7 @@ export function AuthPanel({
           setFeedback(errorFeedback(result.error as ClientError))
           return
         }
-        if (authMethods.emailVerificationRequired) {
+        if (methods.emailVerificationRequired) {
           setDirection(1)
           setMode('verify')
           setFeedback('verificationSent')
@@ -630,11 +597,11 @@ export function AuthPanel({
                 >
                   {submitting
                     ? mode === 'register' &&
-                      methods?.emailVerificationRequired !== false
+                      methods.emailVerificationRequired
                       ? strings.auth.sendingCode
                       : strings.auth.submitting
                     : mode === 'register' &&
-                        methods?.emailVerificationRequired === false
+                        !methods.emailVerificationRequired
                       ? strings.auth.createAccount
                       : copy.submit}
                 </button>
@@ -670,7 +637,7 @@ export function AuthPanel({
               </form>
 
               {mode !== 'verify' &&
-              (methods?.github || methods?.google || methods?.['linux-do']) ? (
+              (methods.github || methods.google || methods['linux-do']) ? (
                 <div className="mt-6">
                   <div className="flex items-center gap-3" aria-hidden>
                     <span className="h-px flex-1 bg-border-default" />

@@ -1,14 +1,7 @@
-import { loadRuntimeConfig } from '@/lib/settings/resolve'
+import { loadAuthMethods } from '@/lib/auth-methods'
 
 export function GET(): Response {
-  const runtime = loadRuntimeConfig()
-  return Response.json(
-    {
-      github: Boolean(runtime.github),
-      google: Boolean(runtime.google),
-      'linux-do': Boolean(runtime['linux-do']),
-      emailVerificationRequired: runtime.emailVerificationRequired
-    },
-    { headers: { 'cache-control': 'no-store' } }
-  )
+  return Response.json(loadAuthMethods(), {
+    headers: { 'cache-control': 'no-store' }
+  })
 }

@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { AuthPanel } from '@/components/AuthPanel'
 import { getAuth } from '@/lib/auth'
+import { loadAuthMethods } from '@/lib/auth-methods'
 import { allowNext } from '@/lib/auth-navigation'
 
 export const metadata: Metadata = {
@@ -34,6 +35,7 @@ export default async function AuthPage({
   const error = first(params.error)
   return (
     <AuthPanel
+      initialMethods={loadAuthMethods()}
       initialMode={tab === 'register' ? 'register' : 'login'}
       nextPath={next}
       initialError={
