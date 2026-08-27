@@ -6,6 +6,8 @@ import {
   loadPairingReconcilerConfig,
   reconcilePairingsOnce
 } from './reconciler'
+import { loadRelayNodes, type RelayNode } from './nodes'
+import { readPairingProjection } from './projection'
 import {
   openPairingRevokeToken,
   PairingTokenFormatError,
@@ -19,6 +21,9 @@ export type PairingView =
       version: string
       joinUrl: string
       createdAt: number
+      nodeId: string
+      region: string
+      nodeLabel: string
     }
   | {
       kind: 'stale'
@@ -39,6 +44,11 @@ interface RelayCreatedRoom {
 }
 
 interface LifecycleConfig {
+  nodes: RelayNode[]
+  publicOrigin: string
+}
+
+interface RelayLifecycleConfig {
   relayOrigin: string
   serviceToken: string
   publicOrigin: string
@@ -51,6 +61,7 @@ export type PairingLifecycleErrorCode =
   | 'PAIRING_REVOKE_FAILED'
   | 'PAIRING_CHANGED'
   | 'PAIRING_STALE'
+  | 'PAIRING_NODE_UNAVAILABLE'
 
 export class PairingLifecycleError extends Error {
   override readonly name = 'PairingLifecycleError'
@@ -61,7 +72,6 @@ export class PairingLifecycleError extends Error {
 }
 
 function lifecycleConfig(): LifecycleConfig {
-  const reconciler = loadPairingReconcilerConfig()
   const authUrl = process.env.BETTER_AUTH_URL
   if (!authUrl) throw new Error('BETTER_AUTH_URL is required')
   const publicUrl = new URL(authUrl)
@@ -76,9 +86,23 @@ function lifecycleConfig(): LifecycleConfig {
     throw new Error('BETTER_AUTH_URL must contain only scheme and authority')
   }
   return {
-    relayOrigin: reconciler.relayOrigin,
-    serviceToken: reconciler.serviceToken,
+    nodes: loadRelayNodes(),
     publicOrigin: publicUrl.origin
+  }
+}
+
+function relayLifecycleConfig(
+  config: LifecycleConfig,
+  nodeId: string
+): RelayLifecycleConfig {
+  const node = config.nodes.find(
+    (candidate) => candidate.id === nodeId && candidate.enabled
+  )
+  if (!node) throw new PairingLifecycleError('PAIRING_NODE_UNAVAILABLE')
+  return {
+    relayOrigin: node.relayInternalOrigin,
+    serviceToken: node.serviceToken,
+    publicOrigin: config.publicOrigin
   }
 }
 
@@ -139,7 +163,7 @@ async function relayJson(
 }
 
 async function createRelayRoom(
-  config: LifecycleConfig
+  config: RelayLifecycleConfig
 ): Promise<RelayCreatedRoom> {
   let result: Awaited<ReturnType<typeof relayJson>>
   try {
@@ -165,7 +189,7 @@ async function createRelayRoom(
 }
 
 async function revokeRelayRoom(
-  config: LifecycleConfig,
+  config: RelayLifecycleConfig,
   room: Pick<RelayCreatedRoom, 'roomId' | 'revokeToken'>
 ): Promise<void> {
   let response: Response
@@ -196,7 +220,7 @@ function isUniqueConstraint(error: unknown): boolean {
 }
 
 async function roomIsReady(
-  config: LifecycleConfig,
+  config: RelayLifecycleConfig,
   roomId: string,
   requiredRevision: number
 ): Promise<boolean> {
@@ -229,7 +253,8 @@ export async function getUserPairing(userId: string): Promise<PairingView> {
       roomId: pairings.roomId,
       joinUrl: pairings.joinUrl,
       revokeTokenEnc: pairings.revokeTokenEnc,
-      createdAt: pairings.createdAt
+      createdAt: pairings.createdAt,
+      nodeId: pairings.nodeId
     })
     .from(pairings)
     .where(and(eq(pairings.userId, userId), eq(pairings.status, 'active')))
@@ -248,6 +273,9 @@ export async function getUserPairing(userId: string): Promise<PairingView> {
   }
 
   const config = lifecycleConfig()
+  const node = config.nodes.find(
+    (candidate) => candidate.id === row.nodeId && candidate.enabled
+  )
   let staleRecord =
     !isBase64UrlBytes(row.roomId, 16) ||
     row.joinUrl !== `${config.publicOrigin}/remote/${row.roomId}`
@@ -279,31 +307,45 @@ export async function getUserPairing(userId: string): Promise<PairingView> {
   if (!projection) throw new Error('pairing projection state is missing')
 
   return {
-    kind: (await roomIsReady(config, row.roomId, projection.revision))
+    kind: node && (await roomIsReady(
+      relayLifecycleConfig(config, node.id),
+      row.roomId,
+      projection.revision
+    ))
       ? 'ready'
       : 'recovering',
     version: row.id,
     joinUrl: row.joinUrl,
-    createdAt: row.createdAt
+    createdAt: row.createdAt,
+    nodeId: row.nodeId,
+    region: node?.region ?? 'unknown',
+    nodeLabel: node?.label ?? row.nodeId
   }
 }
 
 export async function reconcilePairingsNow(): Promise<void> {
   const config = loadPairingReconcilerConfig()
-  await reconcilePairingsOnce({
-    relayOrigin: config.relayOrigin,
-    serviceToken: config.serviceToken
-  })
+  await Promise.all(
+    config.nodes.map((node) =>
+      reconcilePairingsOnce({
+        relayOrigin: node.relayInternalOrigin,
+        serviceToken: node.serviceToken,
+        readProjection: () => readPairingProjection(node.id)
+      })
+    )
+  )
 }
 
 export async function createUserPairing(
-  userId: string
+  userId: string,
+  nodeId = 'us-1'
 ): Promise<PairingView> {
   const existing = await getUserPairing(userId)
   if (existing.kind !== 'empty') return existing
 
   const config = lifecycleConfig()
-  const room = await createRelayRoom(config)
+  const relayConfig = relayLifecycleConfig(config, nodeId)
+  const room = await createRelayRoom(relayConfig)
   try {
     getDb()
       .insert(pairings)
@@ -311,6 +353,7 @@ export async function createUserPairing(
         id: randomUUID(),
         userId,
         roomId: room.roomId,
+        nodeId,
         joinUrl: room.joinUrl,
         revokeTokenEnc: sealPairingRevokeToken(room.revokeToken),
         status: 'active',
@@ -318,7 +361,7 @@ export async function createUserPairing(
       })
       .run()
   } catch (error) {
-    await revokeRelayRoom(config, room).catch(() => undefined)
+    await revokeRelayRoom(relayConfig, room).catch(() => undefined)
     if (isUniqueConstraint(error)) {
       await reconcilePairingsNow().catch(() => undefined)
       return getUserPairing(userId)
@@ -338,7 +381,8 @@ export async function revokeUserPairing(
       id: pairings.id,
       roomId: pairings.roomId,
       revokeTokenEnc: pairings.revokeTokenEnc,
-      status: pairings.status
+      status: pairings.status,
+      nodeId: pairings.nodeId
     })
     .from(pairings)
     .where(
@@ -368,7 +412,8 @@ export async function revokeUserPairing(
   }
 
   const config = lifecycleConfig()
-  await revokeRelayRoom(config, {
+  const relayConfig = relayLifecycleConfig(config, row.nodeId)
+  await revokeRelayRoom(relayConfig, {
     roomId: row.roomId,
     revokeToken: openPairingRevokeToken(row.revokeTokenEnc)
   })
@@ -397,7 +442,8 @@ export async function rotateUserPairing(
       id: pairings.id,
       roomId: pairings.roomId,
       revokeTokenEnc: pairings.revokeTokenEnc,
-      status: pairings.status
+      status: pairings.status,
+      nodeId: pairings.nodeId
     })
     .from(pairings)
     .where(
@@ -411,11 +457,12 @@ export async function rotateUserPairing(
   if (!current) return getUserPairing(userId)
 
   const config = lifecycleConfig()
+  const relayConfig = relayLifecycleConfig(config, current.nodeId)
   const oldRevokeToken =
     current.status === 'active'
       ? openPairingRevokeToken(current.revokeTokenEnc)
       : undefined
-  const candidate = await createRelayRoom(config)
+  const candidate = await createRelayRoom(relayConfig)
   const candidateId = randomUUID()
   const now = Date.now()
 
@@ -440,6 +487,7 @@ export async function rotateUserPairing(
           id: candidateId,
           userId,
           roomId: candidate.roomId,
+          nodeId: current.nodeId,
           joinUrl: candidate.joinUrl,
           revokeTokenEnc: sealPairingRevokeToken(candidate.revokeToken),
           status: 'active',
@@ -448,7 +496,7 @@ export async function rotateUserPairing(
         .run()
     })
   } catch (error) {
-    await revokeRelayRoom(config, candidate).catch(() => undefined)
+    await revokeRelayRoom(relayConfig, candidate).catch(() => undefined)
     if (
       isUniqueConstraint(error) ||
       (error instanceof PairingLifecycleError &&
@@ -461,7 +509,7 @@ export async function rotateUserPairing(
   }
 
   if (oldRevokeToken) {
-    await revokeRelayRoom(config, {
+    await revokeRelayRoom(relayConfig, {
       roomId: current.roomId,
       revokeToken: oldRevokeToken
     }).catch(() => undefined)

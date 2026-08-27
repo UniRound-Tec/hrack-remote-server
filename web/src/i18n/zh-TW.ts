@@ -200,6 +200,7 @@ export const zhTW = {
       PAIRING_REVOKE_FAILED: '無法確認舊 URL 已失效，記錄維持不變。',
       PAIRING_CHANGED: '配對已在其他位置變更，頁面已更新。',
       PAIRING_STALE: '配對記錄需要輪換。',
+      PAIRING_NODE_UNAVAILABLE: '該 Relay 區域目前無法使用。',
       INVALID_REQUEST: '請求已失效，請重新整理後再試。',
       UNAUTHORIZED: '登入已失效，請重新登入。',
       INTERNAL_ERROR: '暫時無法完成操作，請稍後再試。'

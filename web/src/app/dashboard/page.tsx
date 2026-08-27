@@ -1,6 +1,7 @@
 import { PairingDashboard } from '@/components/dashboard/PairingDashboard'
 import { getAuth } from '@/lib/auth'
 import { getUserPairing } from '@/lib/pairing/lifecycle'
+import { publicRelayNodes } from '@/lib/pairing/nodes'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -18,6 +19,7 @@ export default async function DashboardPage() {
   return (
     <PairingDashboard
       initialPairing={pairing}
+      relayNodes={publicRelayNodes()}
       email={session.user.email}
       isAdmin={session.user.role === 'admin'}
       isMock={

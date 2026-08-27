@@ -55,7 +55,7 @@ function pairingPublicOrigin(): string {
 }
 
 /** Read one SQLite snapshot of the durable pairing identity projection. */
-export function readPairingProjection(): PairingProjection {
+export function readPairingProjection(nodeId = 'us-1'): PairingProjection {
   const publicOrigin = pairingPublicOrigin()
   return getDb().transaction((transaction) => {
     const rows = transaction
@@ -70,6 +70,7 @@ export function readPairingProjection(): PairingProjection {
       .where(
         and(
           eq(pairings.status, 'active'),
+          eq(pairings.nodeId, nodeId),
           or(eq(user.banned, false), isNull(user.banned))
         )
       )

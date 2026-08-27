@@ -343,3 +343,15 @@ HTTP/WS 并发数、当前缓冲字节、双向累计字节，以及 `buffer`/`t
 
 这些是拒绝上限，不是机器容量结论。上线前按目标机器运行 `relay` 的 load gate 并保存报告；
 不要仅因容器 healthy 就宣称容量达标。
+# Regional Relay nodes
+
+The main deployment may set `RELAY_NODES_JSON` to assign pairing rooms to
+multiple Relay regions while keeping accounts and SQLite on the control plane.
+See the root repository's `docs/SPEC-REMOTE-MULTI-NODE.md` for the contract.
+
+A regional host uses `deploy/docker-compose.relay-node.yml`. Set
+`PUBLIC_ORIGIN` to the control-plane origin (so generated join URLs remain
+stable), set that node's `DSH_PUBLIC_ORIGIN` and `RELAY_SERVICE_TOKEN`, then
+terminate TLS with `deploy/nginx.relay-node.conf.example`. Replace
+`CONTROL_CENTER_IP` before enabling Nginx; the system reconciliation route must
+not be reachable from other addresses.

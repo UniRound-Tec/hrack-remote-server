@@ -201,6 +201,7 @@ export const en = {
       PAIRING_REVOKE_FAILED: 'The old URL could not be confirmed inactive, so your record was left unchanged.',
       PAIRING_CHANGED: 'The pairing changed elsewhere. The view has been refreshed.',
       PAIRING_STALE: 'The pairing record must be rotated.',
+      PAIRING_NODE_UNAVAILABLE: 'That Relay region is currently unavailable.',
       INVALID_REQUEST: 'This request is no longer valid. Refresh and try again.',
       UNAUTHORIZED: 'Your session has expired. Sign in again.',
       INTERNAL_ERROR: 'The operation could not be completed. Try again shortly.'

@@ -22,8 +22,8 @@ export async function refreshPairingAction() {
   return pairingActions.get()
 }
 
-export async function createPairingAction() {
-  const result = await pairingActions.create()
+export async function createPairingAction(input: unknown) {
+  const result = await pairingActions.create(input)
   if (result.ok) revalidatePath('/dashboard')
   return result
 }

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   blob,
   check,
+  index,
   integer,
   sqliteTable,
   text,
@@ -62,6 +63,7 @@ export const pairings = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     roomId: text('room_id').notNull(),
+    nodeId: text('node_id').notNull().default('us-1'),
     joinUrl: text('join_url').notNull(),
     revokeTokenEnc: text('revoke_token_enc').notNull(),
     status: text('status', { enum: ['active', 'revoked', 'stale'] })
@@ -71,6 +73,7 @@ export const pairings = sqliteTable(
     revokedAt: integer('revoked_at')
   },
   (table) => [
+    index('pairings_room_id_idx').on(table.roomId),
     uniqueIndex('one_active_per_user')
       .on(table.userId)
       .where(sql`${table.status} = 'active'`)

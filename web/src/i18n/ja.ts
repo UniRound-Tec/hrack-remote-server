@@ -200,6 +200,7 @@ export const ja = {
       PAIRING_REVOKE_FAILED: '古い URL の無効化を確認できなかったため、記録は変更していません。',
       PAIRING_CHANGED: '別の場所でペアリングが変更されました。表示を更新しました。',
       PAIRING_STALE: 'ペアリング記録のローテーションが必要です。',
+      PAIRING_NODE_UNAVAILABLE: 'この Relay リージョンは現在利用できません。',
       INVALID_REQUEST: 'リクエストが無効です。更新して再試行してください。',
       UNAUTHORIZED: 'セッションが切れました。再度ログインしてください。',
       INTERNAL_ERROR: '操作を完了できませんでした。しばらくしてから再試行してください。'

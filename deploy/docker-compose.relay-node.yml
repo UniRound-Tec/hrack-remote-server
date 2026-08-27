@@ -1,0 +1,30 @@
+# Regional HRack node: Relay only. Host Nginx terminates TLS for the Relay and
+# DSH domains and proxies both to the loopback port below.
+
+x-bounded-logs: &bounded-logs
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILES:-5}
+
+services:
+  relay:
+    build:
+      context: ../relay
+    environment:
+      # Keep generated pairing URLs on the control-plane domain.
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?set in .env}
+      DSH_PUBLIC_ORIGIN: ${DSH_PUBLIC_ORIGIN:?set in .env}
+      BASE_PATH: /remote
+      RELAY_SERVICE_TOKEN: ${RELAY_SERVICE_TOKEN:?set in .env}
+    ports:
+      - "127.0.0.1:${RELAY_NODE_PORT:-8788}:3000"
+    restart: unless-stopped
+    logging: *bounded-logs
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

@@ -20,7 +20,7 @@ export type PairingActionResult =
 
 export interface PairingActionService {
   get(): Promise<PairingActionResult>
-  create(): Promise<PairingActionResult>
+  create(input?: unknown): Promise<PairingActionResult>
   revoke(expectedVersion: unknown): Promise<PairingActionResult>
   rotate(expectedVersion: unknown): Promise<PairingActionResult>
 }
@@ -42,6 +42,21 @@ function parseVersionInput(value: unknown): string | undefined {
     value.version.length <= 128 &&
     UUID_PATTERN.test(value.version)
     ? value.version
+    : undefined
+}
+
+function parseCreateInput(value: unknown): string | undefined {
+  if (value === undefined) return 'us-1'
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined
+  }
+  const keys = Object.keys(value)
+  if (keys.length !== 1 || keys[0] !== 'nodeId' || !('nodeId' in value)) {
+    return undefined
+  }
+  return typeof value.nodeId === 'string' &&
+    /^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(value.nodeId)
+    ? value.nodeId
     : undefined
 }
 
@@ -71,7 +86,12 @@ export function createPairingActionService(
 
   return {
     get: () => run(getUserPairing),
-    create: () => run(createUserPairing),
+    create: (input) =>
+      run((userId) => {
+        const nodeId = parseCreateInput(input)
+        if (!nodeId) throw new InvalidPairingActionInput()
+        return createUserPairing(userId, nodeId)
+      }),
     revoke: (input) =>
       run((userId) => {
         const version = parseVersionInput(input)

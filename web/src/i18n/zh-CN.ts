@@ -203,6 +203,7 @@ export const zhCN = {
       PAIRING_REVOKE_FAILED: '无法确认旧 URL 已失效，记录保持不变。',
       PAIRING_CHANGED: '配对已在另一处改变，页面已刷新。',
       PAIRING_STALE: '配对记录需要轮换。',
+      PAIRING_NODE_UNAVAILABLE: '该 Relay 区域当前不可用。',
       INVALID_REQUEST: '请求已失效，请刷新页面后重试。',
       UNAUTHORIZED: '登录已失效，请重新登录。',
       INTERNAL_ERROR: '暂时无法完成操作，请稍后重试。'

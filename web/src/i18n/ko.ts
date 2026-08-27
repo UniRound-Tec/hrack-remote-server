@@ -200,6 +200,7 @@ export const ko = {
       PAIRING_REVOKE_FAILED: '이전 URL의 비활성화를 확인하지 못해 기록을 변경하지 않았습니다.',
       PAIRING_CHANGED: '다른 곳에서 페어링이 변경되어 화면을 갱신했습니다.',
       PAIRING_STALE: '페어링 기록을 교체해야 합니다.',
+      PAIRING_NODE_UNAVAILABLE: '이 Relay 리전을 현재 사용할 수 없습니다.',
       INVALID_REQUEST: '요청이 더 이상 유효하지 않습니다. 새로고침 후 다시 시도하세요.',
       UNAUTHORIZED: '세션이 만료되었습니다. 다시 로그인하세요.',
       INTERNAL_ERROR: '작업을 완료할 수 없습니다. 잠시 후 다시 시도하세요.'

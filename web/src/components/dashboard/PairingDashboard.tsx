@@ -15,6 +15,7 @@ import type {
   PairingActionResult
 } from '@/lib/pairing/action-service'
 import type { PairingView } from '@/lib/pairing/lifecycle'
+import type { PublicRelayNode } from '@/lib/pairing/nodes'
 import { pairingQrDataUrl } from '@/lib/pairing/qr'
 import { type Locale } from '@/i18n'
 import { useLang } from '@/i18n/lang-context'
@@ -52,7 +53,10 @@ function mockPairing(): Extract<PairingView, { kind: 'ready' | 'recovering' }> {
     kind: 'ready',
     version,
     joinUrl: `https://remote.hrack.invalid/mock/${version}`,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    nodeId: 'us-1',
+    region: 'us',
+    nodeLabel: 'United States'
   }
 }
 
@@ -67,11 +71,13 @@ function mockPairingAction(
 
 export function PairingDashboard({
   initialPairing,
+  relayNodes,
   email,
   isAdmin,
   isMock
 }: {
   initialPairing: PairingView
+  relayNodes: PublicRelayNode[]
   email: string
   isAdmin: boolean
   isMock: boolean
@@ -86,6 +92,9 @@ export function PairingDashboard({
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
+  const [selectedNodeId, setSelectedNodeId] = useState(
+    relayNodes[0]?.id ?? 'us-1'
+  )
   const active = pairing.kind === 'ready' || pairing.kind === 'recovering'
   const qrSource = useMemo(
     () => (active ? pairingQrDataUrl(pairing.joinUrl) : null),
@@ -244,12 +253,15 @@ export function PairingDashboard({
           {pairing.kind === 'empty' ? (
             <EmptyPairing
               pending={pending === 'create'}
+              relayNodes={relayNodes}
+              selectedNodeId={selectedNodeId}
+              onNodeChange={setSelectedNodeId}
               onCreate={() =>
                 void apply(
                   'create',
                   isMock
                     ? () => mockPairingAction('create')
-                    : createPairingAction
+                    : () => createPairingAction({ nodeId: selectedNodeId })
                 )
               }
             />
@@ -381,9 +393,15 @@ export function PairingDashboard({
 
 function EmptyPairing({
   pending,
+  relayNodes,
+  selectedNodeId,
+  onNodeChange,
   onCreate
 }: {
   pending: boolean
+  relayNodes: PublicRelayNode[]
+  selectedNodeId: string
+  onNodeChange: (nodeId: string) => void
   onCreate: () => void
 }) {
   const { strings } = useLang()
@@ -399,9 +417,24 @@ function EmptyPairing({
         <p className="mx-auto mt-3 max-w-md text-[13px] leading-6 text-text-muted">
           {strings.dashboard.empty.lead}
         </p>
+        <label className="mx-auto mt-6 block max-w-xs text-left font-maple text-[10px] tracking-[0.14em] text-text-faint uppercase">
+          Relay region
+          <select
+            value={selectedNodeId}
+            disabled={pending || relayNodes.length === 0}
+            onChange={(event) => onNodeChange(event.currentTarget.value)}
+            className="mt-2 h-10 w-full rounded-md border border-border-default bg-content px-3 font-sans text-[13px] tracking-normal text-text-primary normal-case outline-none focus:border-border-strong focus:ring-2 focus:ring-focus-ring/30 disabled:opacity-55"
+          >
+            {relayNodes.map((node) => (
+              <option key={node.id} value={node.id}>
+                {node.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || relayNodes.length === 0}
           onClick={onCreate}
           className="hrack-press mt-7 inline-flex h-10 items-center gap-2 rounded-md bg-button-primary px-5 text-[13px] font-medium text-button-primary-fg hover:bg-button-primary-hover disabled:opacity-55"
         >
@@ -527,6 +560,9 @@ function ActivePairing({
         </div>
 
         <p className="mt-3 font-maple text-[11px] text-text-faint">
+          Relay · {pairing.nodeLabel}
+        </p>
+        <p className="mt-1 font-maple text-[11px] text-text-faint">
           {strings.dashboard.active.createdAt}{' '}
           <time
             dateTime={new Date(pairing.createdAt).toISOString()}

@@ -2,6 +2,7 @@ import {
   readPairingProjection,
   type PairingProjection
 } from './projection'
+import { enabledRelayNodes, loadRelayNodes, type RelayNode } from './nodes'
 
 interface RelayState {
   instanceId: string
@@ -63,11 +64,16 @@ export interface PairingReconcilerConfig {
   relayOrigin: string
   serviceToken: string
   intervalMs: number
+  nodes: RelayNode[]
 }
 
 interface PairingReconcilerEnv {
+  RELAY_NODES_JSON?: string
   RELAY_INTERNAL_ORIGIN?: string
   RELAY_SERVICE_TOKEN?: string
+  PUBLIC_ORIGIN?: string
+  BETTER_AUTH_URL?: string
+  DSH_PUBLIC_ORIGIN?: string
   PAIRING_RECONCILE_INTERVAL_MS?: string
 }
 
@@ -85,21 +91,8 @@ export class RelayReconcileError extends Error {
 export function loadPairingReconcilerConfig(
   env: PairingReconcilerEnv = process.env as PairingReconcilerEnv
 ): PairingReconcilerConfig {
-  const originText = env.RELAY_INTERNAL_ORIGIN
-  if (!originText) throw new Error('RELAY_INTERNAL_ORIGIN is required')
-  const origin = new URL(originText)
-  if (
-    !['http:', 'https:'].includes(origin.protocol) ||
-    origin.pathname !== '/' ||
-    origin.search ||
-    origin.hash
-  ) {
-    throw new Error('RELAY_INTERNAL_ORIGIN must contain only scheme and authority')
-  }
-  const serviceToken = env.RELAY_SERVICE_TOKEN
-  if (!serviceToken || Buffer.byteLength(serviceToken, 'utf8') < 32) {
-    throw new Error('RELAY_SERVICE_TOKEN must be at least 32 bytes')
-  }
+  const nodes = enabledRelayNodes(loadRelayNodes(env))
+  const primary = nodes[0]!
   const intervalMs = Number(env.PAIRING_RECONCILE_INTERVAL_MS ?? '5000')
   if (
     !Number.isSafeInteger(intervalMs) ||
@@ -109,9 +102,10 @@ export function loadPairingReconcilerConfig(
     throw new Error('PAIRING_RECONCILE_INTERVAL_MS must be 1000..60000')
   }
   return {
-    relayOrigin: origin.origin,
-    serviceToken,
-    intervalMs
+    relayOrigin: primary.relayInternalOrigin,
+    serviceToken: primary.serviceToken,
+    intervalMs,
+    nodes
   }
 }
 

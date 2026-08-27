@@ -5,6 +5,7 @@ import {
   runPairingReconciler,
   type PairingReconcilerHealth
 } from '../src/lib/pairing/reconciler'
+import { readPairingProjection } from '../src/lib/pairing/projection'
 
 function healthPort(): number {
   const value = Number(process.env.RECONCILER_HEALTH_PORT ?? '3001')
@@ -17,19 +18,35 @@ function healthPort(): number {
 async function main(): Promise<void> {
   const config = loadPairingReconcilerConfig()
   const staleAfterMs = Math.max(30_000, config.intervalMs * 3)
-  let health: PairingReconcilerHealth = {
-    checkedAt: Date.now(),
-    lastSuccessAt: null,
-    consecutiveFailures: 0
-  }
+  const healthByNode = new Map<string, PairingReconcilerHealth>(
+    config.nodes.map((node) => [
+      node.id,
+      {
+        checkedAt: Date.now(),
+        lastSuccessAt: null,
+        consecutiveFailures: 0
+      }
+    ])
+  )
   const healthServer = createServer((request, response) => {
     if (request.method !== 'GET' || request.url !== '/healthz') {
       response.writeHead(404).end()
       return
     }
-    const healthy =
-      health.lastSuccessAt !== null &&
-      Date.now() - health.lastSuccessAt <= staleAfterMs
+    const nodeHealth = config.nodes.map((node) => ({
+      nodeId: node.id,
+      ...(healthByNode.get(node.id) ?? {
+        checkedAt: Date.now(),
+        lastSuccessAt: null,
+        consecutiveFailures: 1,
+        error: 'NO_HEALTH_STATE'
+      })
+    }))
+    const healthy = nodeHealth.every(
+      (health) =>
+        health.lastSuccessAt !== null &&
+        Date.now() - health.lastSuccessAt <= staleAfterMs
+    )
     response.writeHead(healthy ? 200 : 503, {
       'cache-control': 'no-store',
       'content-type': 'application/json'
@@ -37,10 +54,7 @@ async function main(): Promise<void> {
     response.end(
       JSON.stringify({
         ok: healthy,
-        checkedAt: health.checkedAt,
-        lastSuccessAt: health.lastSuccessAt,
-        consecutiveFailures: health.consecutiveFailures,
-        ...(health.error === undefined ? {} : { error: health.error })
+        nodes: nodeHealth
       })
     )
   })
@@ -54,14 +68,24 @@ async function main(): Promise<void> {
   process.once('SIGTERM', stop)
 
   try {
-    await runPairingReconciler({
-      ...config,
-      signal: controller.signal,
-      healthReporter: (nextHealth) => {
-        health = nextHealth
-      },
-      logger: (record) => process.stdout.write(`${JSON.stringify(record)}\n`)
-    })
+    await Promise.all(
+      config.nodes.map((node) =>
+        runPairingReconciler({
+          relayOrigin: node.relayInternalOrigin,
+          serviceToken: node.serviceToken,
+          intervalMs: config.intervalMs,
+          signal: controller.signal,
+          readProjection: () => readPairingProjection(node.id),
+          healthReporter: (nextHealth) => {
+            healthByNode.set(node.id, nextHealth)
+          },
+          logger: (record) =>
+            process.stdout.write(
+              `${JSON.stringify({ ...record, nodeId: node.id })}\n`
+            )
+        })
+      )
+    )
   } finally {
     process.removeListener('SIGINT', stop)
     process.removeListener('SIGTERM', stop)
