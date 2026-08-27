@@ -19,7 +19,9 @@ function errorResponse(error: unknown): Response {
 }
 
 function provider(value: unknown): OAuthProviderId | undefined {
-  return value === 'github' || value === 'google' ? value : undefined
+  return value === 'github' || value === 'google' || value === 'linux-do'
+    ? value
+    : undefined
 }
 
 export async function GET(request: Request): Promise<Response> {

@@ -104,10 +104,9 @@ CLI 会提示输入密码。`web-tools` 以 `1000:1000` 运行并共享 Web 的 
 
 ### 邮件与 OAuth
 
-默认不强制邮箱验证，注册后可直接登录。要强制验证时，先在 `/admin/mail`
-保存并测试邮件配置，再开启开关；代码路径同时设置
-`emailAndPassword.requireEmailVerification` 与 GitHub/Google 的同名 provider
-选项，避免 OAuth 绕过。邮件及 OAuth secret 使用 AES-256-GCM 存入
+默认不强制邮箱验证，注册后可直接登录。要强制邮箱密码账号验证时，先在
+`/admin/mail` 保存并测试邮件配置，再开启开关；GitHub、Google 与 Linux.do
+使用 provider 身份直接登录，不再追加本地邮箱验证码。邮件及 OAuth secret 使用 AES-256-GCM 存入
 `web-data`；设置 `SETTINGS_ENC_KEY` 可与配对密钥隔离，否则复用
 `PAIRING_ENC_KEY`。
 
@@ -116,10 +115,13 @@ OAuth 可在 `/admin/oauth` 配置，也可由环境变量钉死。Provider 控�
 ```text
 ${PUBLIC_ORIGIN}/api/auth/callback/github
 ${PUBLIC_ORIGIN}/api/auth/callback/google
+${PUBLIC_ORIGIN}/api/auth/callback/linux-do
 ```
 
 GitHub 需授权 `user:email`；私有主邮箱会从 `/user/emails` 解析。Provider
-仍未返回邮箱时不会创建账号，而是回到 `/auth?error=email_not_found`。
+仍未返回邮箱时不会创建账号，而是回到 `/auth?error=email_not_found`。Linux.do
+以不可变用户 `id` 建立身份，并使用 `linuxdo-<id>@oauth.invalid` 作为仅供认证表
+兼容的内部地址；该地址不参与邮箱验证或可信邮箱自动绑定。
 
 ### 安全基线
 

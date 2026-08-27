@@ -91,7 +91,8 @@ export const ko = {
     socialDivider: '또는',
     social: {
       github: 'GitHub로 계속',
-      google: 'Google로 계속'
+      google: 'Google로 계속',
+      'linux-do': 'Linux.do로 계속'
     },
     back: '홈으로 돌아가기',
     errors: {
@@ -266,7 +267,7 @@ export const ko = {
       password: '비밀번호',
       secretSaved: '저장됨. 비워 두면 유지',
       verification: '이메일 인증 요구',
-      verificationHelp: '끄면 가입 후 바로 로그인합니다. 켜면 메일 전송이 가능해야 하며 미인증 계정은 다음 로그인 때 코드를 입력합니다.',
+      verificationHelp: '이메일/비밀번호 계정에만 적용됩니다. 활성화하려면 메일 설정이 필요하며 OAuth ID에는 추가 코드가 필요하지 않습니다.',
       save: '저장',
       saving: '저장 중…',
       sendTest: '테스트 메일 보내기',
@@ -285,7 +286,7 @@ export const ko = {
       clientId: 'Client ID',
       clientSecret: 'Client secret',
       callbackUrl: '콜백 URL',
-      providers: { github: 'GitHub', google: 'Google' }
+      providers: { github: 'GitHub', google: 'Google', 'linux-do': 'Linux.do' }
     },
     userManagement: {
       title: '사용자 관리',

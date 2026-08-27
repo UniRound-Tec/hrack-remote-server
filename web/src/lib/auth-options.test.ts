@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { closeDb, getDb } from './db'
 import { account, user } from './db/auth-schema'
+import { satisfiesVerificationPolicy } from './auth-access'
 import { createAuth } from './auth-options'
 import type { RuntimeAuthConfig } from './settings/resolve'
 
@@ -42,6 +43,16 @@ function googleAuth(emailVerificationRequired: boolean) {
       verifyIdToken: async () => true
     }
   } as unknown as RuntimeAuthConfig)
+}
+
+function linuxDoAuth(emailVerificationRequired: boolean) {
+  return createAuth({
+    emailVerificationRequired,
+    'linux-do': {
+      clientId: 'linux-do-test-client',
+      clientSecret: 'linux-do-test-secret'
+    }
+  })
 }
 
 function googleIdToken({
@@ -127,6 +138,84 @@ async function googleCallback(
   return auth.handler(
     new Request(
       `${BASE_URL}/api/auth/callback/google?code=test-code&state=${encodeURIComponent(state!)}`,
+      { headers: { cookie: cookieHeader(start) } }
+    )
+  )
+}
+
+async function linuxDoCallback(
+  auth: ReturnType<typeof linuxDoAuth>
+): Promise<Response> {
+  const start = await auth.handler(
+    jsonRequest('/sign-in/social', {
+      provider: 'linux-do',
+      callbackURL: '/dashboard',
+      errorCallbackURL: '/auth',
+      disableRedirect: true
+    })
+  )
+  expect(start.status).toBe(200)
+  const started = (await start.json()) as { url: string }
+  const authorizationUrl = new URL(started.url)
+  expect(authorizationUrl.origin + authorizationUrl.pathname).toBe(
+    'https://connect.linux.do/oauth2/authorize'
+  )
+  expect(authorizationUrl.searchParams.get('redirect_uri')).toBe(
+    `${BASE_URL}/api/auth/callback/linux-do`
+  )
+  expect(authorizationUrl.searchParams.get('code_challenge')).toBeTruthy()
+  const state = authorizationUrl.searchParams.get('state')
+  expect(state).toBeTruthy()
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.toString()
+            : input
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined)
+      )
+      if (url === 'https://connect.linux.do/oauth2/token') {
+        expect(headers.get('authorization')).toBe(
+          `Basic ${Buffer.from('linux-do-test-client:linux-do-test-secret').toString('base64')}`
+        )
+        const body = new URLSearchParams(String(init?.body))
+        expect(body.get('redirect_uri')).toBe(
+          `${BASE_URL}/api/auth/callback/linux-do`
+        )
+        expect(body.get('code_verifier')).toBeTruthy()
+        return Response.json({
+          access_token: 'linux-do-test-access',
+          expires_in: 3600,
+          token_type: 'Bearer'
+        })
+      }
+      if (url === 'https://connect.linux.do/api/user') {
+        expect(headers.get('authorization')).toBe(
+          'Bearer linux-do-test-access'
+        )
+        return Response.json({
+          id: 1189,
+          username: 'reno',
+          name: 'Reno',
+          avatar_template:
+            'https://linux.do/user_avatar/linux.do/reno/{size}/4043_2.png',
+          active: true,
+          trust_level: 3,
+          silenced: false
+        })
+      }
+      throw new Error(`Unexpected OAuth request: ${url}`)
+    })
+  )
+
+  return auth.handler(
+    new Request(
+      `${BASE_URL}/api/auth/callback/linux-do?code=test-code&state=${encodeURIComponent(state!)}`,
       { headers: { cookie: cookieHeader(start) } }
     )
   )
@@ -297,7 +386,7 @@ describe('Better Auth contract', () => {
     )
   })
 
-  it('requires the same verification policy for an unverified Google identity', async () => {
+  it('accepts an OAuth identity without local email verification', async () => {
     vi.stubEnv('NODE_ENV', 'test')
     const auth = googleAuth(true)
     const response = await googleIdTokenSignIn(
@@ -309,14 +398,13 @@ describe('Better Auth contract', () => {
       })
     )
 
-    expect(response.status).toBe(403)
-    await expect(response.json()).resolves.toMatchObject({
-      code: 'EMAIL_NOT_VERIFIED'
-    })
-    expect(response.headers.get('set-cookie')).toBeNull()
+    expect(response.status).toBe(200)
+    expect(response.headers.get('set-cookie')).toContain(
+      'better-auth.session_token'
+    )
   })
 
-  it('redirects an unverified Google callback to the verification state', async () => {
+  it('redirects an unverified Google callback to the dashboard', async () => {
     vi.stubEnv('NODE_ENV', 'test')
     const response = await googleCallback(
       googleAuth(true),
@@ -328,12 +416,38 @@ describe('Better Auth contract', () => {
     )
 
     expect(response.status).toBe(302)
-    expect(response.headers.get('location')).toBe(
-      '/auth?error=email_not_verified'
-    )
-    expect(response.headers.get('set-cookie')).not.toContain(
+    expect(response.headers.get('location')).toBe('/dashboard')
+    expect(response.headers.get('set-cookie')).toContain(
       'better-auth.session_token'
     )
+  })
+
+  it('signs in with Linux.do using its stable id and an internal placeholder email', async () => {
+    const response = await linuxDoCallback(linuxDoAuth(true))
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe('/dashboard')
+    expect(response.headers.get('set-cookie')).toContain(
+      'better-auth.session_token'
+    )
+
+    const created = getDb()
+      .select()
+      .from(user)
+      .where(eq(user.email, 'linuxdo-1189@oauth.invalid'))
+      .get()
+    expect(created).toMatchObject({
+      name: 'Reno',
+      emailVerified: false,
+      image: 'https://linux.do/user_avatar/linux.do/reno/288/4043_2.png'
+    })
+    expect(
+      getDb()
+        .select({ providerId: account.providerId, accountId: account.accountId })
+        .from(account)
+        .where(eq(account.userId, created!.id))
+        .get()
+    ).toEqual({ providerId: 'linux-do', accountId: '1189' })
+    expect(satisfiesVerificationPolicy(created!, true)).toBe(true)
   })
 
   it('rejects a Google identity without email without inserting a user', async () => {

@@ -38,6 +38,8 @@ const EMPTY_ENV = [
   'GITHUB_CLIENT_SECRET',
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
+  'LINUX_DO_CLIENT_ID',
+  'LINUX_DO_CLIENT_SECRET',
   'EMAIL_VERIFICATION_REQUIRED',
   'SETTINGS_ENC_KEY'
 ] as const
@@ -171,5 +173,28 @@ describe('encrypted administrator settings', () => {
       enabled: true
     })
     expect(loadRuntimeConfig().github?.clientSecret).toBe('env-secret')
+  })
+
+  it('stores Linux.do credentials and reports its callback without returning the secret', async () => {
+    const view = await saveOAuthSettings(
+      {
+        provider: 'linux-do',
+        enabled: true,
+        clientId: 'linux-do-client',
+        clientSecret: 'linux-do-secret'
+      },
+      'admin-id'
+    )
+
+    expect(readSetting('linux-do')).toEqual({
+      clientId: 'linux-do-client',
+      clientSecret: 'linux-do-secret'
+    })
+    expect(view['linux-do']).toMatchObject({
+      enabled: true,
+      clientId: 'linux-do-client',
+      callbackUrl: 'http://localhost:3000/api/auth/callback/linux-do'
+    })
+    expect(JSON.stringify(view)).not.toContain('linux-do-secret')
   })
 })

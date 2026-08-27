@@ -1,6 +1,7 @@
 'use server'
 
 import { getAuth } from '@/lib/auth'
+import { satisfiesVerificationPolicy } from '@/lib/auth-access'
 import { createPairingActionService } from '@/lib/pairing/action-service'
 import { loadRuntimeConfig } from '@/lib/settings/resolve'
 import { revalidatePath } from 'next/cache'
@@ -10,8 +11,10 @@ const pairingActions = createPairingActionService(async () => {
   const session = await getAuth().api.getSession({ headers: await headers() })
   if (!session) return null
   if (
-    loadRuntimeConfig().emailVerificationRequired &&
-    !session.user.emailVerified
+    !satisfiesVerificationPolicy(
+      session.user,
+      loadRuntimeConfig().emailVerificationRequired
+    )
   ) {
     return null
   }

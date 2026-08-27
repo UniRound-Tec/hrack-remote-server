@@ -1,4 +1,5 @@
 import { getAuth } from '../auth'
+import { satisfiesVerificationPolicy } from '../auth-access'
 import { loadRuntimeConfig } from '../settings/resolve'
 
 export class AdminGuardError extends Error {
@@ -27,8 +28,10 @@ export async function requireAdmin(requestHeaders: Headers) {
   const session = await requireUser(requestHeaders)
   if (
     !hasAdminRole(session.user.role) ||
-    (loadRuntimeConfig().emailVerificationRequired &&
-      !session.user.emailVerified)
+    !satisfiesVerificationPolicy(
+      session.user,
+      loadRuntimeConfig().emailVerificationRequired
+    )
   ) {
     throw new AdminGuardError(403)
   }

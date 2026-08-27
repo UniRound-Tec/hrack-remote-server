@@ -47,11 +47,17 @@ describe('runtime auth config', () => {
     vi.stubEnv('GITHUB_CLIENT_SECRET', '')
     vi.stubEnv('GOOGLE_CLIENT_ID', 'google-id')
     vi.stubEnv('GOOGLE_CLIENT_SECRET', 'google-secret')
+    vi.stubEnv('LINUX_DO_CLIENT_ID', 'linux-do-id')
+    vi.stubEnv('LINUX_DO_CLIENT_SECRET', 'linux-do-secret')
     const config = loadRuntimeConfig()
     expect(config.github).toBeUndefined()
     expect(config.google).toEqual({
       clientId: 'google-id',
       clientSecret: 'google-secret'
+    })
+    expect(config['linux-do']).toEqual({
+      clientId: 'linux-do-id',
+      clientSecret: 'linux-do-secret'
     })
     expect(config.emailVerificationRequired).toBe(false)
   })

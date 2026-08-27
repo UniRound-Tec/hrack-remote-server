@@ -91,7 +91,8 @@ export const zhTW = {
     socialDivider: '或者',
     social: {
       github: '使用 GitHub 繼續',
-      google: '使用 Google 繼續'
+      google: '使用 Google 繼續',
+      'linux-do': '使用 Linux.do 繼續'
     },
     back: '返回首頁',
     errors: {
@@ -266,7 +267,7 @@ export const zhTW = {
       password: '密碼',
       secretSaved: '已儲存；留空保持不變',
       verification: '要求電子郵件驗證',
-      verificationHelp: '關閉時註冊後立即登入；開啟後必須能寄信，未驗證帳號下次登入需要輸入驗證碼。',
+      verificationHelp: '僅約束電子郵件密碼帳號：關閉時註冊後立即登入；開啟前必須先設定可用郵件。OAuth 身分不需額外驗證碼。',
       save: '儲存',
       saving: '正在儲存…',
       sendTest: '傳送測試郵件',
@@ -285,7 +286,7 @@ export const zhTW = {
       clientId: 'Client ID',
       clientSecret: 'Client secret',
       callbackUrl: '回呼 URL',
-      providers: { github: 'GitHub', google: 'Google' }
+      providers: { github: 'GitHub', google: 'Google', 'linux-do': 'Linux.do' }
     },
     userManagement: {
       title: '使用者管理',

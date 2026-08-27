@@ -92,7 +92,8 @@ export const en = {
     socialDivider: 'or',
     social: {
       github: 'Continue with GitHub',
-      google: 'Continue with Google'
+      google: 'Continue with Google',
+      'linux-do': 'Continue with Linux.do'
     },
     back: 'Back to home',
     errors: {
@@ -267,7 +268,7 @@ export const en = {
       password: 'Password',
       secretSaved: 'Saved; leave blank to keep it',
       verification: 'Require email verification',
-      verificationHelp: 'When off, registration signs in immediately. When on, mail must work and unverified accounts enter a code on their next sign-in.',
+      verificationHelp: 'Applies to email/password accounts only. Enabling it requires working mail; OAuth identities need no additional code.',
       save: 'Save',
       saving: 'Saving…',
       sendTest: 'Send test email',
@@ -286,7 +287,7 @@ export const en = {
       clientId: 'Client ID',
       clientSecret: 'Client secret',
       callbackUrl: 'Callback URL',
-      providers: { github: 'GitHub', google: 'Google' }
+      providers: { github: 'GitHub', google: 'Google', 'linux-do': 'Linux.do' }
     },
     userManagement: {
       title: 'User management',

@@ -1,12 +1,21 @@
 import { betterAuth, type BetterAuthPlugin } from 'better-auth'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { admin, emailOTP } from 'better-auth/plugins'
+import { admin, emailOTP, genericOAuth } from 'better-auth/plugins'
 import { assertNotLastAdmin, countActiveAdmins } from './admin/last-admin'
 import { getDb } from './db'
 import * as schema from './db/schema'
 import { isMailReady, sendVerificationOTP } from './mail/provider'
 import { mapTrustedOAuthProfileToUser } from './oauth-link'
+import {
+  LINUX_DO_ACCOUNT_ISSUER,
+  LINUX_DO_AUTHORIZATION_URL,
+  LINUX_DO_PROVIDER_ID,
+  LINUX_DO_TOKEN_URL,
+  LINUX_DO_USER_INFO_URL,
+  linuxDoAccountSubject,
+  mapLinuxDoProfile
+} from './linuxdo'
 import { loadTrustedOrigins } from './settings/trusted-origins'
 import {
   loadRuntimeConfig,
@@ -58,7 +67,6 @@ export function createAuth(
         ? {
             github: {
               ...runtime.github,
-              requireEmailVerification: runtime.emailVerificationRequired,
               mapProfileToUser: mapTrustedOAuthProfileToUser
             }
           }
@@ -67,7 +75,6 @@ export function createAuth(
         ? {
             google: {
               ...runtime.google,
-              requireEmailVerification: runtime.emailVerificationRequired,
               mapProfileToUser: mapTrustedOAuthProfileToUser
             }
           }
@@ -167,6 +174,29 @@ export function createAuth(
         }
       }),
       admin({ defaultRole: 'user', adminRoles: ['admin'] }),
+      ...(runtime['linux-do']
+        ? [
+            genericOAuth({
+              config: [
+                {
+                  providerId: LINUX_DO_PROVIDER_ID,
+                  name: 'Linux.do',
+                  ...runtime['linux-do'],
+                  authorizationUrl: LINUX_DO_AUTHORIZATION_URL,
+                  tokenUrl: LINUX_DO_TOKEN_URL,
+                  userInfoUrl: LINUX_DO_USER_INFO_URL,
+                  authentication: 'basic',
+                  accountIssuer: LINUX_DO_ACCOUNT_ISSUER,
+                  accountSubject: ({ profile }) =>
+                    linuxDoAccountSubject(profile),
+                  mapProfileToUser: mapLinuxDoProfile,
+                  requireEmailVerification: false,
+                  pkce: true
+                }
+              ]
+            })
+          ]
+        : []),
       ...extraPlugins
     ]
   })

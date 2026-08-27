@@ -11,6 +11,7 @@ export type StoredSettings = {
   smtp: SmtpConfig
   github: StoredOAuthProvider
   google: StoredOAuthProvider
+  'linux-do': StoredOAuthProvider
   emailVerificationRequired: boolean
 }
 

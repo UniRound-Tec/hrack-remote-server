@@ -94,7 +94,8 @@ export const zhCN = {
     socialDivider: '或者',
     social: {
       github: '使用 GitHub 继续',
-      google: '使用 Google 继续'
+      google: '使用 Google 继续',
+      'linux-do': '使用 Linux.do 继续'
     },
     back: '返回首页',
     errors: {
@@ -269,7 +270,7 @@ export const zhCN = {
       password: '密码',
       secretSaved: '已保存；留空保持不变',
       verification: '要求邮箱验证',
-      verificationHelp: '关闭时注册后立即登录；打开后必须能发信，未验证账号下次登录需要填写验证码。',
+      verificationHelp: '仅约束邮箱密码账号：关闭时注册后立即登录；打开前必须先配置可用邮件。OAuth 身份无需额外验证码。',
       save: '保存',
       saving: '正在保存…',
       sendTest: '发送测试邮件',
@@ -288,7 +289,7 @@ export const zhCN = {
       clientId: 'Client ID',
       clientSecret: 'Client secret',
       callbackUrl: '回调 URL',
-      providers: { github: 'GitHub', google: 'Google' }
+      providers: { github: 'GitHub', google: 'Google', 'linux-do': 'Linux.do' }
     },
     userManagement: {
       title: '用户管理',

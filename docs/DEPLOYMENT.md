@@ -107,13 +107,18 @@ docker compose --profile tools run --rm web-tools create-admin \
 
 CLI 会提示密码。不要改用 root、`npx @latest` 或依赖 CLI 自动发现配置。
 
-默认不强制邮箱验证。要开启验证，先在 `/admin/mail` 保存并发送真实测试邮件，确认送达后
-再打开开关。OAuth 回调地址为：
+默认不强制邮箱验证。要开启邮箱密码账号验证，先在 `/admin/mail` 保存并发送真实测试邮件，
+确认送达后再打开开关。OAuth provider 身份不追加本地邮箱验证码；回调地址为：
 
 ```text
 ${PUBLIC_ORIGIN}/api/auth/callback/github
 ${PUBLIC_ORIGIN}/api/auth/callback/google
+${PUBLIC_ORIGIN}/api/auth/callback/linux-do
 ```
+
+Linux.do 在 `https://connect.linux.do/dash/sso` 申请应用，服务端使用授权、token 与
+用户资料端点 `https://connect.linux.do/oauth2/authorize`、
+`https://connect.linux.do/oauth2/token`、`https://connect.linux.do/api/user`。
 
 ## 5. 配对 URL 持久化模型
 

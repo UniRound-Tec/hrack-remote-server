@@ -91,7 +91,8 @@ export const ja = {
     socialDivider: 'または',
     social: {
       github: 'GitHub で続行',
-      google: 'Google で続行'
+      google: 'Google で続行',
+      'linux-do': 'Linux.do で続行'
     },
     back: 'ホームへ戻る',
     errors: {
@@ -266,7 +267,7 @@ export const ja = {
       password: 'パスワード',
       secretSaved: '保存済み。空欄なら維持',
       verification: 'メール認証を必須にする',
-      verificationHelp: 'オフでは登録後すぐログインします。オンではメール送信が必須で、未認証アカウントは次回ログイン時にコードを入力します。',
+      verificationHelp: 'メール／パスワードのアカウントだけに適用されます。有効化にはメール設定が必要で、OAuth ID に追加コードは不要です。',
       save: '保存',
       saving: '保存中…',
       sendTest: 'テストメールを送信',
@@ -285,7 +286,7 @@ export const ja = {
       clientId: 'Client ID',
       clientSecret: 'Client secret',
       callbackUrl: 'コールバック URL',
-      providers: { github: 'GitHub', google: 'Google' }
+      providers: { github: 'GitHub', google: 'Google', 'linux-do': 'Linux.do' }
     },
     userManagement: {
       title: 'ユーザー管理',

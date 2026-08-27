@@ -6,13 +6,16 @@ import { useEffect, useState } from 'react'
 
 type Draft = Record<OAuthProviderId, { enabled: boolean; clientId: string; clientSecret: string }>
 
+const PROVIDERS = ['github', 'google', 'linux-do'] as const
+
 export function OAuthSettingsPanel() {
   const { strings } = useLang()
   const copy = strings.admin.settings
   const [view, setView] = useState<OAuthSettingsView | null>(null)
   const [draft, setDraft] = useState<Draft>({
     github: { enabled: false, clientId: '', clientSecret: '' },
-    google: { enabled: false, clientId: '', clientSecret: '' }
+    google: { enabled: false, clientId: '', clientSecret: '' },
+    'linux-do': { enabled: false, clientId: '', clientSecret: '' }
   })
   const [busy, setBusy] = useState<OAuthProviderId | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -21,7 +24,8 @@ export function OAuthSettingsPanel() {
     setView(next)
     setDraft({
       github: { enabled: next.github.enabled, clientId: next.github.clientId, clientSecret: '' },
-      google: { enabled: next.google.enabled, clientId: next.google.clientId, clientSecret: '' }
+      google: { enabled: next.google.enabled, clientId: next.google.clientId, clientSecret: '' },
+      'linux-do': { enabled: next['linux-do'].enabled, clientId: next['linux-do'].clientId, clientSecret: '' }
     })
   }
 
@@ -71,7 +75,7 @@ export function OAuthSettingsPanel() {
       {notice && <div role="status" className="mt-6 rounded-lg border border-border-default bg-surface px-3 py-2.5 text-[12px] text-text-secondary">{notice}</div>}
 
       <div className="mt-8 space-y-4">
-        {(['github', 'google'] as const).map((provider) => {
+        {PROVIDERS.map((provider) => {
           const item = view[provider]
           const form = draft[provider]
           return (

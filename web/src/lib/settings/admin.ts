@@ -39,7 +39,13 @@ export type MailSettingsView = {
   }
 }
 
-export type OAuthProviderId = 'github' | 'google'
+export type OAuthProviderId = 'github' | 'google' | 'linux-do'
+
+const OAUTH_ENV_PREFIX: Record<OAuthProviderId, string> = {
+  github: 'GITHUB',
+  google: 'GOOGLE',
+  'linux-do': 'LINUX_DO'
+}
 
 export type OAuthSettingsView = Record<
   OAuthProviderId,
@@ -103,7 +109,7 @@ function oauthEnv(provider: OAuthProviderId): {
   clientId?: string
   clientSecret?: string
 } {
-  const prefix = provider.toUpperCase()
+  const prefix = OAUTH_ENV_PREFIX[provider]
   return {
     clientId: emptyToUndef(process.env[`${prefix}_CLIENT_ID`]),
     clientSecret: emptyToUndef(process.env[`${prefix}_CLIENT_SECRET`])
@@ -291,7 +297,11 @@ function oauthView(provider: OAuthProviderId): OAuthSettingsView[OAuthProviderId
 }
 
 export function getOAuthSettingsView(): OAuthSettingsView {
-  return { github: oauthView('github'), google: oauthView('google') }
+  return {
+    github: oauthView('github'),
+    google: oauthView('google'),
+    'linux-do': oauthView('linux-do')
+  }
 }
 
 export function saveOAuthSettings(

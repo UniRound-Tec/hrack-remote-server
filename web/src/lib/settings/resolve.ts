@@ -10,6 +10,7 @@ export type RuntimeAuthConfig = {
   emailVerificationRequired: boolean
   github?: OAuthRuntimeConfig
   google?: OAuthRuntimeConfig
+  'linux-do'?: OAuthRuntimeConfig
 }
 
 export function emptyToUndef(value: string | undefined): string | undefined {
@@ -60,6 +61,8 @@ export function loadRuntimeConfig(): RuntimeAuthConfig {
   const githubEnvSecret = emptyToUndef(process.env.GITHUB_CLIENT_SECRET)
   const googleEnvId = emptyToUndef(process.env.GOOGLE_CLIENT_ID)
   const googleEnvSecret = emptyToUndef(process.env.GOOGLE_CLIENT_SECRET)
+  const linuxDoEnvId = emptyToUndef(process.env.LINUX_DO_CLIENT_ID)
+  const linuxDoEnvSecret = emptyToUndef(process.env.LINUX_DO_CLIENT_SECRET)
   return {
     emailVerificationRequired: verificationSetting().value,
     github: envPair(
@@ -71,6 +74,13 @@ export function loadRuntimeConfig(): RuntimeAuthConfig {
       googleEnvId,
       googleEnvSecret,
       googleEnvId && googleEnvSecret ? undefined : readSetting('google')
+    ),
+    'linux-do': envPair(
+      linuxDoEnvId,
+      linuxDoEnvSecret,
+      linuxDoEnvId && linuxDoEnvSecret
+        ? undefined
+        : readSetting('linux-do')
     )
   }
 }

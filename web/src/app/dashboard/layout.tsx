@@ -1,4 +1,5 @@
 import { getAuth } from '@/lib/auth'
+import { satisfiesVerificationPolicy } from '@/lib/auth-access'
 import { loadRuntimeConfig } from '@/lib/settings/resolve'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -14,8 +15,10 @@ export default async function DashboardLayout({
   const session = await getAuth().api.getSession({ headers: await headers() })
   if (!session) redirect('/auth?next=/dashboard')
   if (
-    loadRuntimeConfig().emailVerificationRequired &&
-    !session.user.emailVerified
+    !satisfiesVerificationPolicy(
+      session.user,
+      loadRuntimeConfig().emailVerificationRequired
+    )
   ) {
     redirect('/auth?tab=login&error=email_not_verified')
   }

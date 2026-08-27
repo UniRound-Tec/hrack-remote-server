@@ -6,7 +6,7 @@ import { useLang } from '@/i18n/lang-context'
 import { authClient } from '@/lib/auth-client'
 import { allowNext } from '@/lib/auth-navigation'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ArrowLeft, Eye, EyeOff, Mail } from 'lucide-react'
+import { ArrowLeft, CircleUserRound, Eye, EyeOff, Mail } from 'lucide-react'
 import {
   useEffect,
   useId,
@@ -52,10 +52,11 @@ type Feedback =
 type AuthMethods = {
   github: boolean
   google: boolean
+  'linux-do': boolean
   emailVerificationRequired: boolean
 }
 
-type OAuthProvider = 'github' | 'google'
+type OAuthProvider = 'github' | 'google' | 'linux-do'
 
 type ClientError = {
   status?: number
@@ -668,7 +669,8 @@ export function AuthPanel({
                 )}
               </form>
 
-              {mode !== 'verify' && (methods?.github || methods?.google) ? (
+              {mode !== 'verify' &&
+              (methods?.github || methods?.google || methods?.['linux-do']) ? (
                 <div className="mt-6">
                   <div className="flex items-center gap-3" aria-hidden>
                     <span className="h-px flex-1 bg-border-default" />
@@ -692,6 +694,14 @@ export function AuthPanel({
                         icon={<Google className="size-4" />}
                         label={strings.auth.social.google}
                         onClick={() => void signInWith('google')}
+                      />
+                    ) : null}
+                    {methods['linux-do'] ? (
+                      <OAuthButton
+                        disabled={oauthSubmitting !== null}
+                        icon={<CircleUserRound className="size-4" />}
+                        label={strings.auth.social['linux-do']}
+                        onClick={() => void signInWith('linux-do')}
                       />
                     ) : null}
                   </div>
