@@ -343,7 +343,7 @@ HTTP/WS 并发数、当前缓冲字节、双向累计字节，以及 `buffer`/`t
 
 这些是拒绝上限，不是机器容量结论。上线前按目标机器运行 `relay` 的 load gate 并保存报告；
 不要仅因容器 healthy 就宣称容量达标。
-# Regional Relay nodes
+## 13. Regional Relay nodes
 
 The main deployment may set `RELAY_NODES_JSON` to assign pairing rooms to
 multiple Relay regions while keeping accounts and SQLite on the control plane.
@@ -355,3 +355,29 @@ stable), set that node's `DSH_PUBLIC_ORIGIN` and `RELAY_SERVICE_TOKEN`, then
 terminate TLS with `deploy/nginx.relay-node.conf.example`. Replace
 `CONTROL_CENTER_IP` before enabling Nginx; the system reconciliation route must
 not be reachable from other addresses.
+
+If the hosting network intercepts unfiled domain HTTP Host or TLS SNI traffic,
+changing HTTP to WSS does not bypass that policy. Use a publicly trusted IP
+certificate only after proving both domain HTTP-01 and TLS-ALPN-01 are being
+reset or rewritten. Let’s Encrypt IP certificates require the `shortlived`
+profile and a client with IP-address support (Certbot 5.4 or newer):
+
+```sh
+certbot certonly \
+  --preferred-profile shortlived \
+  --webroot --webroot-path /var/www/certbot \
+  --ip-address RELAY_NODE_IP
+```
+
+Use `deploy/nginx.relay-node-ip.conf.example` for this mode. Relay/WSS remains
+on `https://RELAY_NODE_IP:443`; DSH uses
+`https://RELAY_NODE_IP:8443`. The different authority is mandatory because the
+Relay dispatches DSH public traffic by Host authority. Open TCP 443 and 8443,
+set both origins explicitly in `RELAY_NODES_JSON`, and set the regional
+container's `DSH_PUBLIC_ORIGIN` to the same `:8443` value. A single IP/port for
+both origins makes management and Relay routes look like DSH requests.
+
+IP certificates are valid for roughly six days. Install an independent renewal
+timer that invokes the same modern Certbot executable at least twice daily and
+reloads Nginx through a deploy hook. Do not rely on an older distribution
+`certbot.timer`, because it cannot renew an IP-address lineage.

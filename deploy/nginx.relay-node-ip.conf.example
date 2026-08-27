@@ -1,0 +1,89 @@
+# Regional Relay fallback for a host where unfiled domain Host/SNI traffic is
+# intercepted. Replace RELAY_NODE_IP and CONTROL_CENTER_IP before enabling.
+# The IP certificate must cover RELAY_NODE_IP. Relay/WSS uses 443; DSH uses
+# 8443 because the Relay distinguishes the DSH gateway by Host authority.
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+
+    location / {
+        return 301 https://RELAY_NODE_IP$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
+    server_name _;
+
+    ssl_certificate /etc/letsencrypt/live/RELAY_NODE_IP/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/RELAY_NODE_IP/privkey.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    location = /remote/v1/system {
+        access_log off;
+        allow CONTROL_CENTER_IP;
+        deny all;
+        proxy_pass http://127.0.0.1:8788;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+    }
+
+    location ^~ /remote/v1/system/ {
+        access_log off;
+        allow CONTROL_CENTER_IP;
+        deny all;
+        proxy_pass http://127.0.0.1:8788;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+    }
+
+    location /remote/ {
+        access_log off;
+        proxy_pass http://127.0.0.1:8788;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    location / { return 404; }
+}
+
+server {
+    listen 8443 ssl http2;
+    listen [::]:8443 ssl http2;
+    server_name _;
+
+    ssl_certificate /etc/letsencrypt/live/RELAY_NODE_IP/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/RELAY_NODE_IP/privkey.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    access_log off;
+
+    location / {
+        proxy_pass http://127.0.0.1:8788;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}
