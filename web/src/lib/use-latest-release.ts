@@ -1,8 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { detectPlatform, type DetectedPlatform, type PlatformId } from './platform'
-import { RELEASES_PAGE, type LatestRelease } from './releases'
+import { detectPlatform, type DetectedPlatform } from './platform'
+import {
+  ANDROID_RELEASES_PAGE,
+  RELEASES_PAGE,
+  type DownloadId,
+  type LatestRelease
+} from './releases'
 
 let inflight: Promise<LatestRelease | null> | null = null
 
@@ -34,7 +39,7 @@ export function useLatestRelease(): LatestRelease | null {
 export function useDownloadTarget(): {
   platform: DetectedPlatform | null
   href: string
-  urlFor: (id: PlatformId) => string
+  urlFor: (id: DownloadId) => string
 } {
   const release = useLatestRelease()
   const [platform, setPlatform] = useState<DetectedPlatform | null>(null)
@@ -43,7 +48,9 @@ export function useDownloadTarget(): {
     setPlatform(detectPlatform(navigator.userAgent))
   }, [])
 
-  const urlFor = (id: PlatformId): string => release?.urls[id] ?? RELEASES_PAGE
+  const urlFor = (id: DownloadId): string =>
+    release?.urls[id] ??
+    (id === 'android' ? ANDROID_RELEASES_PAGE : RELEASES_PAGE)
   const href = platform ? urlFor(platform.id) : RELEASES_PAGE
 
   return { platform, href, urlFor }

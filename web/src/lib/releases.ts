@@ -3,8 +3,13 @@ import type { PlatformId } from './platform'
 export const RELEASES_PAGE = 'https://github.com/UniRound-Tec/HRack/releases'
 export const GITHUB_LATEST_API =
   'https://api.github.com/repos/UniRound-Tec/HRack/releases/latest'
+export const ANDROID_RELEASES_PAGE =
+  'https://github.com/UniRound-Tec/hrack-remote-app/releases/latest'
+export const ANDROID_GITHUB_LATEST_API =
+  'https://api.github.com/repos/UniRound-Tec/hrack-remote-app/releases/latest'
 
-export type ReleaseUrls = Partial<Record<PlatformId, string>>
+export type DownloadId = PlatformId | 'android'
+export type ReleaseUrls = Partial<Record<DownloadId, string>>
 
 type GithubAsset = { name: string; browser_download_url: string }
 
@@ -48,4 +53,10 @@ export function mapReleaseAssets(
         pick(assets, (name) => /\.deb$/i.test(name))
     }
   }
+}
+
+export function mapAndroidReleaseAsset(
+  assets: GithubAsset[]
+): string | undefined {
+  return pick(assets, (name) => /\.apk$/i.test(name))
 }

@@ -9,9 +9,6 @@ import { LandingFluidGlass } from './LandingFluidGlass'
 import { formatGitHubStars, GITHUB_REPOSITORY_URL } from '@/lib/github'
 import { useGitHubStars } from '@/lib/use-github-stars'
 import { useDownloadTarget } from '@/lib/use-latest-release'
-
-const ANDROID_RELEASES =
-  'https://github.com/UniRound-Tec/hrack-remote-app/releases/latest'
 const DOCS_URL = 'https://github.com/UniRound-Tec/HRack#readme'
 const CONTACT_URL = 'https://github.com/UniRound-Tec/HRack/issues'
 const ABOUT_URL = 'https://github.com/UniRound-Tec'
@@ -118,7 +115,7 @@ export function LandingHero() {
             Download for Windows
           </ActionLink>
           <ActionLink
-            href={ANDROID_RELEASES}
+            href={urlFor('android')}
             variant="android"
             icon={
               <Image
