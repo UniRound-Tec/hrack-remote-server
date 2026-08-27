@@ -2,6 +2,8 @@
 
 import { Mesh, Program, Renderer, Triangle } from 'ogl'
 import { useEffect, useRef } from 'react'
+import { useVisualPerformanceProfile } from '@/lib/use-visual-performance'
+import { markVisualFrame } from '@/lib/visual-fps'
 
 const vertex = `
 attribute vec2 position;
@@ -41,7 +43,7 @@ float noise(vec2 p) {
 float fbm(vec2 p) {
   float value = 0.0;
   float amplitude = 0.5;
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 3; i++) {
     value += amplitude * noise(p);
     p = p * 2.03 + vec2(17.1, 9.2);
     amplitude *= 0.5;
@@ -94,10 +96,12 @@ void main() {
 export function LandingBeams() {
   const sceneRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
+  const { backgroundDpr, backgroundFps, constrained, reducedMotion } =
+    useVisualPerformanceProfile()
 
   useEffect(() => {
     const scene = sceneRef.current
-    if (!scene) return
+    if (!scene || reducedMotion) return
 
     const target = { x: 0, y: 0, px: 50, py: 72 }
     const current = { x: 0, y: 0, px: 50, py: 72 }
@@ -111,9 +115,11 @@ export function LandingBeams() {
       target.y = (y - 0.5) * 2
       target.px = x * 100
       target.py = 8 + y * 84
+      if (!frame) frame = requestAnimationFrame(animatePointer)
     }
 
     const animatePointer = () => {
+      frame = 0
       current.x += (target.x - current.x) * 0.075
       current.y += (target.y - current.y) * 0.075
       current.px += (target.px - current.px) * 0.075
@@ -127,17 +133,22 @@ export function LandingBeams() {
       scene.style.setProperty('--smoke-y-reverse', `${shiftY * -0.55}px`)
       scene.style.setProperty('--smoke-pointer-x', `${current.px}%`)
       scene.style.setProperty('--smoke-pointer-y', `${current.py}%`)
-      frame = requestAnimationFrame(animatePointer)
+
+      const unsettled =
+        Math.abs(target.x - current.x) > 0.002 ||
+        Math.abs(target.y - current.y) > 0.002 ||
+        Math.abs(target.px - current.px) > 0.04 ||
+        Math.abs(target.py - current.py) > 0.04
+      if (unsettled) frame = requestAnimationFrame(animatePointer)
     }
 
     window.addEventListener('pointermove', handlePointerMove, { passive: true })
-    frame = requestAnimationFrame(animatePointer)
 
     return () => {
       cancelAnimationFrame(frame)
       window.removeEventListener('pointermove', handlePointerMove)
     }
-  }, [])
+  }, [reducedMotion])
 
   useEffect(() => {
     const host = hostRef.current
@@ -146,7 +157,7 @@ export function LandingBeams() {
     const renderer = new Renderer({
       alpha: true,
       premultipliedAlpha: false,
-      dpr: Math.min(window.devicePixelRatio || 1, 1.5)
+      dpr: backgroundDpr
     })
     const gl = renderer.gl
     gl.clearColor(0, 0, 0, 0)
@@ -173,7 +184,10 @@ export function LandingBeams() {
     gl.canvas.addEventListener('webglcontextlost', handleContextLost)
 
     const resize = () => {
-      renderer.setSize(host.clientWidth, host.clientHeight)
+      renderer.setSize(
+        Math.max(host.clientWidth, 1),
+        Math.max(host.clientHeight, 1)
+      )
     }
     const observer = new ResizeObserver(resize)
     observer.observe(host)
@@ -181,34 +195,80 @@ export function LandingBeams() {
     host.appendChild(gl.canvas)
 
     let frame = 0
-    const render = (now: number) => {
-      program.uniforms.uTime.value = now * 0.001
+    let lastRender = Number.NEGATIVE_INFINITY
+    let intersecting = true
+    let stopped = false
+    const frameInterval = backgroundFps > 0 ? 1000 / backgroundFps : Infinity
+
+    const draw = (now: number) => {
+      program.uniforms.uTime.value = backgroundFps > 0 ? now * 0.001 : 0
       renderer.render({ scene: mesh })
+      markVisualFrame('background')
       host.classList.add('is-ready')
-      if (!document.hidden) {
-        frame = requestAnimationFrame(render)
+    }
+
+    const render = (now: number) => {
+      frame = 0
+      if (stopped || document.hidden || !intersecting) return
+      if (now - lastRender >= frameInterval - 1) {
+        draw(now)
+        lastRender = now
       }
+      frame = requestAnimationFrame(render)
+    }
+
+    const schedule = () => {
+      if (
+        stopped ||
+        frame ||
+        document.hidden ||
+        !intersecting ||
+        backgroundFps <= 0
+      ) {
+        return
+      }
+      frame = requestAnimationFrame(render)
     }
 
     const resume = () => {
       cancelAnimationFrame(frame)
-      render(performance.now())
+      frame = 0
+      if (document.hidden || !intersecting) return
+      lastRender = Number.NEGATIVE_INFINITY
+      draw(performance.now())
+      schedule()
     }
+
+    const intersectionObserver = new IntersectionObserver(([entry]) => {
+      intersecting = entry?.isIntersecting ?? true
+      if (intersecting) resume()
+      else {
+        cancelAnimationFrame(frame)
+        frame = 0
+      }
+    })
+    intersectionObserver.observe(host)
     document.addEventListener('visibilitychange', resume)
     resume()
 
     return () => {
+      stopped = true
       cancelAnimationFrame(frame)
       observer.disconnect()
+      intersectionObserver.disconnect()
       document.removeEventListener('visibilitychange', resume)
       gl.canvas.removeEventListener('webglcontextlost', handleContextLost)
       if (gl.canvas.parentElement === host) host.removeChild(gl.canvas)
       gl.getExtension('WEBGL_lose_context')?.loseContext()
     }
-  }, [])
+  }, [backgroundDpr, backgroundFps])
 
   return (
-    <div ref={sceneRef} aria-hidden className="landing-beams">
+    <div
+      ref={sceneRef}
+      aria-hidden
+      className={`landing-beams${constrained ? ' is-constrained' : ''}${reducedMotion ? ' is-reduced-motion' : ''}`}
+    >
       <div ref={hostRef} className="landing-beams-canvas" />
       <div className="landing-smoke">
         <span />

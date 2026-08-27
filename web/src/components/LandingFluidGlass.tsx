@@ -2,6 +2,8 @@
 
 import { MeshTransmissionMaterial, useFBO } from '@react-three/drei'
 import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber'
+import { useVisualPerformanceProfile } from '@/lib/use-visual-performance'
+import { markVisualFrame } from '@/lib/visual-fps'
 import {
   useCallback,
   useEffect,
@@ -122,7 +124,8 @@ function GlassPill({
   canvasHeight,
   canvasWidth,
   index,
-  reducedMotion
+  reducedMotion,
+  samples
 }: {
   active: boolean
   bounds: ButtonBounds
@@ -131,13 +134,14 @@ function GlassPill({
   canvasWidth: number
   index: number
   reducedMotion: boolean
+  samples: number
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const hover = useRef(0)
   const geometry = useMemo(() => {
     const radius = bounds.height / 2
     const length = Math.max(bounds.width - bounds.height, 0.01)
-    const nextGeometry = new THREE.CapsuleGeometry(radius, length, 16, 48)
+    const nextGeometry = new THREE.CapsuleGeometry(radius, length, 12, 32)
     nextGeometry.rotateZ(Math.PI / 2)
     return nextGeometry
   }, [bounds.height, bounds.width])
@@ -182,7 +186,7 @@ function GlassPill({
         ior={1.16}
         opacity={0.96}
         roughness={0.055}
-        samples={6}
+        samples={samples}
         temporalDistortion={reducedMotion ? 0 : 0.075}
         thickness={18}
         transmission={1}
@@ -195,20 +199,35 @@ function GlassPill({
 function GlassScene({
   activeIndex,
   bounds,
+  fboScale,
   onRendered,
-  reducedMotion
+  reducedMotion,
+  transmissionSamples
 }: {
   activeIndex: number | null
   bounds: ButtonBounds[]
+  fboScale: number
   onRendered: () => void
   reducedMotion: boolean
+  transmissionSamples: number
 }) {
-  const buffer = useFBO()
+  const { size } = useThree()
+  const buffer = useFBO(
+    Math.max(1, Math.ceil(size.width * fboScale)),
+    Math.max(1, Math.ceil(size.height * fboScale)),
+    {
+      depthBuffer: false,
+      magFilter: THREE.LinearFilter,
+      minFilter: THREE.LinearFilter,
+      samples: 0,
+      stencilBuffer: false,
+      type: THREE.UnsignedByteType
+    }
+  )
   const bufferScene = useMemo(() => new THREE.Scene(), [])
   const backdropMaterialRef = useRef<THREE.ShaderMaterial>(null)
   const didRenderRef = useRef(false)
   const savedClearColor = useMemo(() => new THREE.Color(), [])
-  const { size } = useThree()
 
   useFrame(({ camera, gl }) => {
     const previousTarget = gl.getRenderTarget()
@@ -219,6 +238,7 @@ function GlassScene({
     gl.setClearColor(0x000000, 1)
     gl.clear(true, true, true)
     gl.render(bufferScene, camera)
+    markVisualFrame('glass')
     gl.setRenderTarget(previousTarget)
     gl.setClearColor(savedClearColor, previousAlpha)
 
@@ -249,10 +269,53 @@ function GlassScene({
           index={index}
           key={`${index}-${buttonBounds.width}-${buttonBounds.height}`}
           reducedMotion={reducedMotion}
+          samples={transmissionSamples}
         />
       ))}
     </>
   )
+}
+
+function DemandFrameLoop({ active, fps }: { active: boolean; fps: number }) {
+  const invalidate = useThree(state => state.invalidate)
+
+  useEffect(() => {
+    invalidate()
+    if (!active || fps <= 0) return
+
+    const interval = 1000 / fps
+    let frame = 0
+    let lastRender = Number.NEGATIVE_INFINITY
+    let stopped = false
+
+    const render = (now: number) => {
+      frame = 0
+      if (stopped || document.hidden) return
+      if (now - lastRender >= interval - 1) {
+        invalidate()
+        lastRender = now
+      }
+      frame = requestAnimationFrame(render)
+    }
+    const resume = () => {
+      cancelAnimationFrame(frame)
+      frame = 0
+      if (document.hidden) return
+      lastRender = Number.NEGATIVE_INFINITY
+      invalidate()
+      frame = requestAnimationFrame(render)
+    }
+
+    document.addEventListener('visibilitychange', resume)
+    resume()
+    return () => {
+      stopped = true
+      cancelAnimationFrame(frame)
+      document.removeEventListener('visibilitychange', resume)
+    }
+  }, [active, fps, invalidate])
+
+  return null
 }
 
 function sameBounds(a: ButtonBounds[], b: ButtonBounds[]) {
@@ -275,16 +338,27 @@ export function LandingFluidGlass() {
   const layerRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [bounds, setBounds] = useState<ButtonBounds[]>([])
-  const [reducedMotion, setReducedMotion] = useState(false)
+  const [inView, setInView] = useState(true)
   const [rendered, setRendered] = useState(false)
   const handleRendered = useCallback(() => setRendered(true), [])
+  const {
+    constrained,
+    fboScale,
+    glassDpr,
+    glassFps,
+    glassHoverFps,
+    reducedMotion,
+    transmissionSamples
+  } = useVisualPerformanceProfile()
 
   useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const update = () => setReducedMotion(media.matches)
-    update()
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
+    const layer = layerRef.current
+    if (!layer) return
+    const observer = new IntersectionObserver(([entry]) => {
+      setInView(entry?.isIntersecting ?? true)
+    })
+    observer.observe(layer)
+    return () => observer.disconnect()
   }, [])
 
   useLayoutEffect(() => {
@@ -351,14 +425,14 @@ export function LandingFluidGlass() {
     <div
       ref={layerRef}
       aria-hidden
-      className={`landing-fluid-glass${rendered && bounds.length === 3 ? ' is-rendered' : ''}`}
+      className={`landing-fluid-glass${rendered && bounds.length === 3 ? ' is-rendered' : ''}${constrained ? ' is-constrained' : ''}`}
     >
       <Canvas
         camera={{ position: [0, 0, 100], zoom: 1 }}
-        dpr={[1, 1.5]}
+        dpr={glassDpr}
         fallback={null}
-        frameloop={reducedMotion ? 'demand' : 'always'}
-        gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
+        frameloop="demand"
+        gl={{ alpha: true, antialias: true, powerPreference: 'default' }}
         orthographic
         onCreated={({ gl }) => {
           gl.setClearColor(0x000000, 0)
@@ -367,11 +441,17 @@ export function LandingFluidGlass() {
           })
         }}
       >
+        <DemandFrameLoop
+          active={inView}
+          fps={activeIndex === null ? glassFps : glassHoverFps}
+        />
         <GlassScene
           activeIndex={activeIndex}
           bounds={bounds}
+          fboScale={fboScale}
           onRendered={handleRendered}
           reducedMotion={reducedMotion}
+          transmissionSamples={transmissionSamples}
         />
       </Canvas>
     </div>

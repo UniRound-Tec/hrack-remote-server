@@ -4,6 +4,7 @@ import { zhCN } from '@/i18n/zh-CN'
 import { LangProvider } from '@/i18n/lang-context'
 import { isLocale, parseAcceptLanguage, resolveLocale } from '@/i18n/locale'
 import { RouteBackdrop } from '@/components/RouteBackdrop'
+import { VisualFpsBadge } from '@/components/VisualFpsBadge'
 import '@fontsource/noto-sans-sc/400.css'
 import '@fontsource/noto-sans-sc/500.css'
 import '@fontsource/noto-sans-sc/700.css'
@@ -41,6 +42,7 @@ export default async function RootLayout({
         <div className="relative z-10">
           <LangProvider initialLang={initialLang}>{children}</LangProvider>
         </div>
+        <VisualFpsBadge />
       </body>
     </html>
   )

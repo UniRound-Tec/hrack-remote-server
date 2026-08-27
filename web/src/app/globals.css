@@ -551,7 +551,7 @@ body {
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(ellipse at center, rgb(255 255 255 / 22%) 0%, rgb(255 255 255 / 11%) 36%, transparent 72%);
-  filter: blur(clamp(34px, 4.2vw, 84px));
+  filter: blur(clamp(26px, 3.4vw, 68px));
   content: "";
   opacity: 0.72;
   will-change: top, left;
@@ -565,7 +565,7 @@ body {
   border-radius: 50%;
   background:
     radial-gradient(ellipse at center, rgb(255 255 255 / 40%) 0%, rgb(255 255 255 / 19%) 35%, transparent 73%);
-  filter: blur(clamp(40px, 5vw, 96px));
+  filter: blur(clamp(30px, 4vw, 76px));
   opacity: 0.78;
   will-change: transform, opacity;
 }
@@ -608,6 +608,24 @@ body {
     transform: translate3d(calc(-31% + var(--smoke-x-reverse)), calc(4% + var(--smoke-y-reverse)), 0) scale(1.28, 0.92) rotate(-12deg);
     opacity: 0.7;
   }
+}
+
+/* 大面积模糊层以低频阶梯推进，肉眼仍是缓慢烟雾，但避免每个刷新帧都重合成。 */
+.landing-beams .landing-smoke > span {
+  animation-timing-function: steps(120, end);
+}
+
+.landing-beams.is-constrained .landing-smoke::after {
+  filter: blur(clamp(22px, 3vw, 56px));
+}
+
+.landing-beams.is-constrained .landing-smoke > span {
+  animation-timing-function: steps(72, end);
+  filter: blur(clamp(26px, 3.4vw, 64px));
+}
+
+.landing-beams.is-reduced-motion .landing-smoke > span {
+  animation: none;
 }
 
 .landing-copy {
@@ -1114,6 +1132,10 @@ body {
 
   .flow-wire-dot {
     display: none;
+  }
+
+  .landing-smoke > span {
+    animation: none !important;
   }
 
   .hrack-press,
