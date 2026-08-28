@@ -10,7 +10,7 @@ import {
   parseRemoteFrame
 } from '../src/protocol/remote-protocol.js'
 
-const upstreamSha256 = '3c06b0f8e83e51c949f564b70a4f07890f901dab77bf164e5398a9814637b588'
+const upstreamSha256 = '4733e22e08c468c6e8445885f92d8b5de5809503cc120f0ebf5be1b47586c2d7'
 const protocolPath = fileURLToPath(
   new URL('../src/protocol/remote-protocol.ts', import.meta.url)
 )
@@ -53,6 +53,18 @@ describe('vendored remote protocol contract', () => {
       JSON.stringify({ v: 1, type: 'focus-session', sessionId: 's1' })
     )
     expect(focus.ok && isRemotePhoneToDesktopMessage(focus.value)).toBe(true)
+    const cursorSync = parseRemoteFrame(
+      JSON.stringify({
+        v: 1,
+        type: 'pty-cursor-sync',
+        sessionId: 's1',
+        row: 20,
+        column: 7
+      })
+    )
+    expect(
+      cursorSync.ok && isRemoteDesktopToPhoneMessage(cursorSync.value)
+    ).toBe(true)
   })
 
   it('forwards create dimensions and leaves blank workspace rejection to the desktop', () => {
